@@ -16,3 +16,5 @@ local.properties
 *.keystore
 google-services.json
 .vscode/
+_bmad/
+_bmad-output/
