@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!--
+        hued icon: a small palette strip in the center.
+        Five color bands representing the core product —
+        the palette IS the brand.
+    -->
+    <path android:fillColor="#D4764E" android:pathData="M24,46 L24,62 L33.6,62 L33.6,46 Z" />
+    <path android:fillColor="#C4956A" android:pathData="M33.6,46 L33.6,62 L43.2,62 L43.2,46 Z" />
+    <path android:fillColor="#8B6F4E" android:pathData="M43.2,46 L43.2,62 L52.8,62 L52.8,46 Z" />
+    <path android:fillColor="#E8A87C" android:pathData="M52.8,46 L52.8,62 L62.4,62 L62.4,46 Z" />
+    <path android:fillColor="#D4A574" android:pathData="M62.4,46 L62.4,62 L72,62 L72,46 Z" />
+</vector>

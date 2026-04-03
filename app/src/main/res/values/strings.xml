@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">hued</string>
+    <string name="tagline">your life in color</string>
+
+    <!-- Notifications -->
+    <string name="notification_weekly_title">Your week in color is ready</string>
+    <string name="notification_year_title">Your %d in Color is ready</string>
+
+    <!-- Permission -->
+    <string name="privacy_message">All processing happens on your device.</string>
+    <string name="permission_denied_message">hued needs your photos to show your colors</string>
+    <string name="partial_access_note">Results reflect selected photos</string>
+
+    <!-- Empty states -->
+    <string name="no_photos_message">Take some photos and come back — your colors are waiting.</string>
+
+    <!-- Processing -->
+    <string name="processing_notification">Building your color history…</string>
+</resources>

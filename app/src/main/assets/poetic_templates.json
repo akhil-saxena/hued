@@ -1,0 +1,11 @@
+[
+  {"warmth": "warm", "saturation": "vibrant", "descriptions": ["Loud and alive.", "Every corner burning bright.", "Days that refused to be quiet."]},
+  {"warmth": "warm", "saturation": "muted", "descriptions": ["A month painted in stillness.", "Warm days finding their way back in.", "Soft light through drawn curtains."]},
+  {"warmth": "warm", "saturation": "mixed", "descriptions": ["Some days burned, others glowed.", "Warmth with pockets of shade.", "The kind of light that stays."]},
+  {"warmth": "cool", "saturation": "vibrant", "descriptions": ["Sharp and clear as cold air.", "Blue in every direction.", "The kind of cold that wakes you up."]},
+  {"warmth": "cool", "saturation": "muted", "descriptions": ["The quiet after everything settled.", "Grey days, gentle days.", "Mornings that took their time."]},
+  {"warmth": "cool", "saturation": "mixed", "descriptions": ["Cool tones finding their rhythm.", "Between blue and grey, something steady.", "Days that felt like deep water."]},
+  {"warmth": "neutral", "saturation": "vibrant", "descriptions": ["Color from everywhere at once.", "A month that couldn't pick a side.", "Equal parts everything."]},
+  {"warmth": "neutral", "saturation": "muted", "descriptions": ["Quiet across the board.", "Nothing shouting, nothing hiding.", "The palette of an ordinary month."]},
+  {"warmth": "neutral", "saturation": "mixed", "descriptions": ["A little bit of everything.", "No single color took the lead.", "Balanced, like it was meant to be."]}
+]
