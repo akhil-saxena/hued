@@ -27,7 +27,9 @@ object DatabaseModule {
             context,
             HuedDatabase::class.java,
             "hued-database",
-        ).build()
+        )
+            .addMigrations(HuedDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun providePaletteResultDao(db: HuedDatabase): PaletteResultDao = db.paletteResultDao()

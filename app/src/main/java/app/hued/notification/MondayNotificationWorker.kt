@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.glance.appwidget.updateAll
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -14,9 +15,9 @@ import app.hued.MainActivity
 import app.hued.R
 import app.hued.data.repository.PaletteRepository
 import app.hued.util.DateUtils
+import app.hued.widget.HuedWidget
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import java.time.ZoneId
 
 private const val CHANNEL_ID = "hued_weekly"
 private const val NOTIFICATION_ID = 100
@@ -45,6 +46,10 @@ class MondayNotificationWorker @AssistedInject constructor(
         if (photoCount < MIN_PHOTO_THRESHOLD) return Result.success()
 
         showNotification()
+
+        // Refresh widget with latest data
+        HuedWidget().updateAll(applicationContext)
+
         return Result.success()
     }
 

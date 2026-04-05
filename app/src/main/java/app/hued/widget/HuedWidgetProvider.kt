@@ -25,23 +25,31 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import androidx.room.Room
 import app.hued.MainActivity
 import app.hued.data.local.HuedDatabase
 import app.hued.data.model.TimePeriod
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface WidgetEntryPoint {
+    fun database(): HuedDatabase
+}
 
 class HuedWidget : GlanceAppWidget() {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val db = Room.databaseBuilder(
-            context, HuedDatabase::class.java, "hued-database",
-        ).build()
+        val entryPoint = EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
+        val db = entryPoint.database()
 
         val paletteEntity = withContext(Dispatchers.IO) {
             db.periodPaletteDao().getLatestByType(TimePeriod.WEEK.name).firstOrNull()

@@ -4,13 +4,9 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,16 +20,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,48 +37,72 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.hued.ui.theme.HuedCanvasResting
 import app.hued.ui.theme.HuedTextPrimary
 import app.hued.ui.theme.LocalHuedTextMuted
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-// Sample photo colors — simulates extracting from a gallery
-private val samplePhotoColors = listOf(
-    listOf(Color(0xFFD4764E), Color(0xFFC4956A), Color(0xFF8B6F4E)),
-    listOf(Color(0xFF4A7B9D), Color(0xFF5B8FA8), Color(0xFF6B9DB8)),
-    listOf(Color(0xFF4A7C59), Color(0xFF6B8F71), Color(0xFF8BA888)),
-    listOf(Color(0xFFE8A87C), Color(0xFFD4A574), Color(0xFFB87333)),
-    listOf(Color(0xFF8B4513), Color(0xFFA0522D), Color(0xFFCD853F)),
-    listOf(Color(0xFF3D5A80), Color(0xFF4A6D8C), Color(0xFF5780A0)),
+// 5 visually distinct swatches — warm, cool, natural, soft, golden
+// dominantIndex per swatch varies position so selection feels organic
+private val swatchColors = listOf(
+    // Warm terracotta family — dominant top-left
+    listOf(Color(0xFFCB6D51), Color(0xFFD4956A), Color(0xFFE8B89A), Color(0xFFA85A3C)),
+    // Cool ocean family — dominant bottom-right
+    listOf(Color(0xFF5B93B5), Color(0xFF85B8D4), Color(0xFF2C526B), Color(0xFF3B6B8A)),
+    // Natural forest family — dominant top-right
+    listOf(Color(0xFF72A67E), Color(0xFF4A7C59), Color(0xFF9DC4A5), Color(0xFF3A6145)),
+    // Dusty lavender family — dominant bottom-left
+    listOf(Color(0xFFB8A9C9), Color(0xFF9882B0), Color(0xFF7B6897), Color(0xFFC4B8D6)),
+    // Warm amber family — dominant bottom-right
+    listOf(Color(0xFFD4A24E), Color(0xFFE8C476), Color(0xFFBF8A32), Color(0xFFC49540)),
 )
 
-// The resulting palette from all "photos"
+// Which cube index is "dominant" per swatch (varies the pick position)
+private val dominantIndices = listOf(0, 3, 1, 2, 3)
+
+// The 5 dominant colors form the palette
 private val resultPalette = listOf(
-    Color(0xFFD4764E),
-    Color(0xFF4A7B9D),
+    Color(0xFFCB6D51),
+    Color(0xFF3B6B8A),
     Color(0xFF4A7C59),
-    Color(0xFFE8A87C),
-    Color(0xFF3D5A80),
+    Color(0xFF7B6897),
+    Color(0xFFC49540),
 )
+
+private val SWATCH_COUNT = 5
+private val SWATCH_SIZE = 64.dp
+private val INNER_GAP = 3.dp
+private val INNER_RADIUS = 3.dp
+private val OUTER_RADIUS = 6.dp
 
 @Composable
 fun OnboardingScreen(
     onPermissionResult: (granted: Boolean) -> Unit,
     onComplete: () -> Unit,
 ) {
-    // Animation phases
-    var phase by remember { mutableIntStateOf(0) }
-    // 0: initial — show single "photo" being extracted
-    // 1: single photo extraction complete — show strip from one photo
-    // 2: zoom out — show gallery grid of "photos"
-    // 3: gallery transforms into a single combined palette strip
-    // 4: show text + button
+    var showSwatches by remember { mutableStateOf(false) }
+    var selectingIndex by remember { mutableIntStateOf(-1) }
+    var landedBands by remember { mutableIntStateOf(0) }
+    var hideSwatches by remember { mutableStateOf(false) }
 
-    var extractedBands by remember { mutableIntStateOf(0) }
-    var showGallery by remember { mutableStateOf(false) }
-    var galleryToStrip by remember { mutableStateOf(false) }
-    var showButton by remember { mutableStateOf(false) }
+    // Per-swatch stagger appearance
+    val swatchAppeared = remember { List(SWATCH_COUNT) { Animatable(0f) } }
+    // Per-swatch: non-dominant fade out
+    val nonDominantAlpha = remember { List(SWATCH_COUNT) { Animatable(1f) } }
+    // Per-swatch: dominant scale up
+    val dominantScale = remember { List(SWATCH_COUNT) { Animatable(1f) } }
+    // Per-band: strip band alpha
+    val bandAlpha = remember { List(SWATCH_COUNT) { Animatable(0f) } }
+    // Swatch area fade-out
+    val swatchAreaAlpha = remember { Animatable(1f) }
+    // Phase 3: text + button entrance
+    val ctaAlpha = remember { Animatable(0f) }
+    val ctaOffsetY = remember { Animatable(40f) }
+    // Footer wordmark
+    val footerAlpha = remember { Animatable(0f) }
 
     val galleryPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -93,213 +112,218 @@ fun OnboardingScreen(
         onComplete()
     }
 
-    // Animation sequence
     LaunchedEffect(Unit) {
-        // Phase 0→1: Extract colors from "one photo" — bands appear one by one
         delay(400)
-        for (i in 1..3) {
-            delay(250)
-            extractedBands = i
+
+        // Phase 1: Swatches appear with stagger
+        showSwatches = true
+        for (i in 0 until SWATCH_COUNT) {
+            launch { swatchAppeared[i].animateTo(1f, tween(350, easing = FastOutSlowInEasing)) }
+            delay(100)
         }
-        phase = 1
         delay(600)
 
-        // Phase 2: Show gallery grid
-        showGallery = true
-        phase = 2
-        delay(1200)
+        // Phase 2: Select dominant from each swatch, one at a time
+        for (i in 0 until SWATCH_COUNT) {
+            selectingIndex = i
 
-        // Phase 3: Gallery merges into combined palette
-        galleryToStrip = true
-        phase = 3
-        delay(800)
+            // Non-dominant cubes fade out, dominant scales up
+            launch { nonDominantAlpha[i].animateTo(0.15f, tween(500)) }
+            launch { dominantScale[i].animateTo(1.15f, tween(400, easing = FastOutSlowInEasing)) }
+            delay(350)
 
-        // Phase 4: Show text + button
-        showButton = true
-        phase = 4
+            // Band appears in strip
+            launch { bandAlpha[i].animateTo(1f, tween(400, easing = FastOutSlowInEasing)) }
+            landedBands = i + 1
+            delay(300)
+
+            // Dominant settles back
+            launch { dominantScale[i].animateTo(1f, tween(250)) }
+            delay(250)
+        }
+
+        delay(500)
+
+        // Phase 3: Swatches fade out, CTA fades/slides in, footer appears
+        launch { swatchAreaAlpha.animateTo(0f, tween(600, easing = FastOutSlowInEasing)) }
+        delay(300)
+        launch { ctaAlpha.animateTo(1f, tween(900, easing = FastOutSlowInEasing)) }
+        launch { ctaOffsetY.animateTo(0f, tween(900, easing = FastOutSlowInEasing)) }
+        launch { footerAlpha.animateTo(1f, tween(1000, delayMillis = 200, easing = FastOutSlowInEasing)) }
     }
 
-    val galleryScale by animateFloatAsState(
-        targetValue = if (galleryToStrip) 0f else 1f,
-        animationSpec = tween(600, easing = FastOutSlowInEasing),
-        label = "galleryScale",
-    )
-
-    val stripAlpha by animateFloatAsState(
-        targetValue = if (galleryToStrip) 1f else 0f,
-        animationSpec = tween(600, delayMillis = 300),
-        label = "stripAlpha",
-    )
-
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(HuedCanvasResting)
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            .background(HuedCanvasResting),
     ) {
-        // Phase 0-1: Single photo extraction
-        if (!showGallery && !galleryToStrip) {
-            // "Photo" placeholder — a colored rectangle
-            Box(
-                modifier = Modifier
-                    .size(160.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFD4A574).copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                // Simulated photo — gradient-like block
-                Column {
-                    Box(
-                        modifier = Modifier
-                            .size(160.dp, 80.dp)
-                            .background(Color(0xFF87CEEB).copy(alpha = 0.5f)),
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(160.dp, 80.dp)
-                            .background(Color(0xFF8B6F4E).copy(alpha = 0.5f)),
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Extraction result — bands appear below the photo
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .height(32.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-            ) {
-                samplePhotoColors[0].forEachIndexed { index, color ->
-                    val alpha = remember { Animatable(0f) }
-                    LaunchedEffect(extractedBands > index) {
-                        if (extractedBands > index) {
-                            alpha.animateTo(1f, animationSpec = tween(300))
-                        }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(32.dp)
-                            .background(color.copy(alpha = alpha.value)),
-                    )
-                }
-            }
-        }
-
-        // Phase 2: Gallery grid
-        if (showGallery && galleryScale > 0.01f) {
-            Column(
-                modifier = Modifier.scale(galleryScale),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                for (row in 0..1) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for (col in 0..2) {
-                            val photoIdx = row * 3 + col
-                            val photoColors = samplePhotoColors[photoIdx]
-                            // Each "photo" as a small color block
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(photoColors[0].copy(alpha = 0.7f)),
-                            ) {
-                                // Mini extraction strip at bottom
-                                Row(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .fillMaxWidth()
-                                        .height(12.dp),
-                                ) {
-                                    photoColors.forEach { c ->
-                                        Box(modifier = Modifier.weight(1f).height(12.dp).background(c))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Phase 3: Combined palette strip (fades in as gallery fades out)
-        if (galleryToStrip) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .alpha(stripAlpha)
-                    .clip(RoundedCornerShape(4.dp)),
-            ) {
-                resultPalette.forEach { color ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(80.dp)
-                            .background(color),
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // Phase 4: Text + button
-        AnimatedVisibility(
-            visible = showButton,
-            enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { it / 4 },
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "your life in color",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = HuedTextPrimary,
-                    textAlign = TextAlign.Center,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "All processing happens on your device.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = LocalHuedTextMuted.current,
-                    textAlign = TextAlign.Center,
-                )
+            // Phase 1-2: Swatches (kept in layout tree to avoid jump on fade-out)
+            if (showSwatches) {
+                Row(
+                    modifier = Modifier.alpha(swatchAreaAlpha.value),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    for (i in 0 until SWATCH_COUNT) {
+                        SwatchCell(
+                            colors = swatchColors[i],
+                            dominantIndex = dominantIndices[i],
+                            appeared = swatchAppeared[i].value,
+                            nonDominantAlpha = nonDominantAlpha[i].value,
+                            dominantScale = dominantScale[i].value,
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(32.dp))
+            }
 
-                // Permission button — user initiates, no auto-prompt
-                Box(
+            // Palette strip — bands appear as they're selected
+            if (landedBands > 0) {
+                Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(HuedTextPrimary)
-                        .clickable {
-                            val permissions = when {
-                                Build.VERSION.SDK_INT >= 34 -> arrayOf(
-                                    Manifest.permission.READ_MEDIA_IMAGES,
-                                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
-                                )
-                                Build.VERSION.SDK_INT >= 33 -> arrayOf(
-                                    Manifest.permission.READ_MEDIA_IMAGES,
-                                )
-                                else -> arrayOf(
-                                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                                )
-                            }
-                            galleryPermissionLauncher.launch(permissions)
-                        }
-                        .padding(horizontal = 32.dp, vertical = 14.dp),
-                    contentAlignment = Alignment.Center,
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .clip(RoundedCornerShape(OUTER_RADIUS)),
+                ) {
+                    resultPalette.forEachIndexed { index, color ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(72.dp)
+                                .alpha(bandAlpha[index].value)
+                                .background(color),
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
+            }
+
+            // Phase 3: Text + button (manual animation — no AnimatedVisibility)
+            if (ctaAlpha.value > 0.01f) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .alpha(ctaAlpha.value)
+                        .offset { IntOffset(0, ctaOffsetY.value.dp.roundToPx()) },
                 ) {
                     Text(
-                        text = "show me my colors",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = HuedCanvasResting,
+                        text = "your life in color",
+                        style = MaterialTheme.typography.displaySmall,
+                        color = HuedTextPrimary,
+                        textAlign = TextAlign.Center,
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "All processing happens on your device.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = LocalHuedTextMuted.current,
+                        textAlign = TextAlign.Center,
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(HuedTextPrimary)
+                            .clickable {
+                                val permissions = when {
+                                    Build.VERSION.SDK_INT >= 34 -> arrayOf(
+                                        Manifest.permission.READ_MEDIA_IMAGES,
+                                        Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+                                    )
+                                    Build.VERSION.SDK_INT >= 33 -> arrayOf(
+                                        Manifest.permission.READ_MEDIA_IMAGES,
+                                    )
+                                    else -> arrayOf(
+                                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                                    )
+                                }
+                                galleryPermissionLauncher.launch(permissions)
+                            }
+                            .padding(horizontal = 32.dp, vertical = 14.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "show me my colors",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = HuedCanvasResting,
+                        )
+                    }
+                }
+            }
+        }
+
+        // Footer wordmark — appears with CTA
+        if (footerAlpha.value > 0.01f) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .alpha(footerAlpha.value)
+                    .padding(bottom = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "hued",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = LocalHuedTextMuted.current,
+                )
+                Text(
+                    text = "v1.0.0",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = LocalHuedTextMuted.current.copy(alpha = 0.5f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwatchCell(
+    colors: List<Color>,
+    dominantIndex: Int,
+    appeared: Float,
+    nonDominantAlpha: Float,
+    dominantScale: Float,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .size(SWATCH_SIZE)
+            .scale(appeared)
+            .alpha(appeared)
+            .clip(RoundedCornerShape(OUTER_RADIUS)),
+        verticalArrangement = Arrangement.spacedBy(INNER_GAP),
+    ) {
+        for (row in 0..1) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(INNER_GAP),
+            ) {
+                for (col in 0..1) {
+                    val idx = row * 2 + col
+                    val isDominant = idx == dominantIndex
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .then(
+                                if (isDominant) Modifier.scale(dominantScale)
+                                else Modifier.alpha(nonDominantAlpha)
+                            )
+                            .clip(RoundedCornerShape(INNER_RADIUS))
+                            .background(colors.getOrElse(idx) { Color.Gray }),
                     )
                 }
             }

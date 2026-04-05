@@ -50,6 +50,12 @@ object DateUtils {
 
     fun formatWeek(startDate: LocalDate): String {
         val end = startDate.plusDays(6)
-        return "${startDate.dayOfMonth}–${end.dayOfMonth} ${formatMonth(startDate)}"
+        val startMonth = startDate.month.name.lowercase().replaceFirstChar { it.uppercase() }
+        val endMonth = end.month.name.lowercase().replaceFirstChar { it.uppercase() }
+        return if (startDate.month == end.month) {
+            "${startDate.dayOfMonth}–${end.dayOfMonth} $startMonth ${end.year}"
+        } else {
+            "${startDate.dayOfMonth} $startMonth – ${end.dayOfMonth} $endMonth ${end.year}"
+        }
     }
 }

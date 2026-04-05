@@ -1,9 +1,11 @@
 package app.hued.data.repository
 
 import app.hued.data.local.dao.ExcludedFolderDao
+import app.hued.data.local.dao.FolderCount
 import app.hued.data.local.dao.PaletteResultDao
 import app.hued.data.local.dao.PeriodPaletteDao
 import app.hued.data.local.dao.ProcessingCheckpointDao
+import app.hued.data.local.entity.ExcludedFolderEntity
 import app.hued.data.local.entity.PaletteResultEntity
 import app.hued.data.local.entity.PeriodPaletteEntity
 import app.hued.data.local.entity.ProcessingCheckpointEntity
@@ -30,6 +32,12 @@ class PaletteRepositoryImpl @Inject constructor(
         endEpochDay: Long,
     ): PeriodPaletteEntity? =
         periodPaletteDao.getForPeriod(type.name, startEpochDay, endEpochDay)
+
+    override suspend fun deleteAllPalettes() =
+        periodPaletteDao.deleteAll()
+
+    override suspend fun deletePaletteForPeriod(type: TimePeriod, startEpochDay: Long) =
+        periodPaletteDao.deleteForPeriod(type.name, startEpochDay)
 
     override suspend fun savePalette(palette: PeriodPaletteEntity) =
         periodPaletteDao.insert(palette)
@@ -58,6 +66,9 @@ class PaletteRepositoryImpl @Inject constructor(
     override suspend fun getCheckpoint(): ProcessingCheckpointEntity? =
         processingCheckpointDao.getCheckpoint()
 
+    override fun observeCheckpoint(): Flow<ProcessingCheckpointEntity?> =
+        processingCheckpointDao.observeCheckpoint()
+
     override suspend fun saveCheckpoint(checkpoint: ProcessingCheckpointEntity) =
         processingCheckpointDao.save(checkpoint)
 
@@ -66,4 +77,19 @@ class PaletteRepositoryImpl @Inject constructor(
 
     override suspend fun getPhotoCountForPeriod(startEpochDay: Long, endEpochDay: Long): Int =
         periodPaletteDao.getPhotoCountForPeriod(startEpochDay, endEpochDay)
+
+    override suspend fun deleteAllResults() =
+        paletteResultDao.deleteAll()
+
+    override suspend fun getFolderCounts(): List<FolderCount> =
+        paletteResultDao.getFolderCounts()
+
+    override fun observeExcludedFolders(): Flow<List<ExcludedFolderEntity>> =
+        excludedFolderDao.getAll()
+
+    override suspend fun addExcludedFolder(path: String) =
+        excludedFolderDao.insert(ExcludedFolderEntity(path))
+
+    override suspend fun removeExcludedFolder(path: String) =
+        excludedFolderDao.delete(path)
 }

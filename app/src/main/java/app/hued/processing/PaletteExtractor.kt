@@ -15,20 +15,27 @@ class PaletteExtractor @Inject constructor(
     private val context: Context,
 ) {
 
-    private val targetSize = 200 // downsampled for fast extraction
+    private val targetSize = 300 // downsampled for fast extraction, 300px retains secondary colors better
 
     fun extract(imageUri: Uri, maxColors: Int = 5): ExtractedColors? {
         return try {
             val bitmap = loadDownsampled(imageUri) ?: return null
-            val palette = Palette.from(bitmap).maximumColorCount(maxColors).generate()
+            val palette = Palette.from(bitmap).maximumColorCount(maxColors * 2).generate()
+
+            // Filter out noise swatches (< 3% of total pixels)
+            val totalPixels = palette.swatches.sumOf { it.population }
+            val minPopulation = (totalPixels * 0.03).toInt()
+
             val colors = palette.swatches
+                .filter { it.population >= minPopulation }
                 .sortedByDescending { it.population }
                 .take(maxColors)
                 .map { swatch -> String.format("#%06X", 0xFFFFFF and swatch.rgb) }
 
             if (colors.isEmpty()) null else ExtractedColors(colors)
         } catch (e: Exception) {
-            null // silently skip corrupt images
+            android.util.Log.w("PaletteExtractor", "Failed to extract colors from $imageUri", e)
+            null
         }
     }
 

@@ -3,6 +3,8 @@ package app.hued.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import app.hued.data.local.dao.DelightStateDao
 import app.hued.data.local.dao.ExcludedFolderDao
 import app.hued.data.local.dao.PaletteResultDao
@@ -27,11 +29,20 @@ import app.hued.data.local.entity.StreakDataEntity
         ProcessingCheckpointEntity::class,
         ExcludedFolderEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class HuedDatabase : RoomDatabase() {
+
+    companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE PeriodPalette ADD COLUMN colorWeights TEXT DEFAULT NULL")
+            }
+        }
+    }
+
     abstract fun paletteResultDao(): PaletteResultDao
     abstract fun periodPaletteDao(): PeriodPaletteDao
     abstract fun streakDao(): StreakDao

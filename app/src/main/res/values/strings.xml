@@ -9,12 +9,49 @@
 
     <!-- Permission -->
     <string name="privacy_message">All processing happens on your device.</string>
+    <string name="dcim_hint">For best results, grant access to your DCIM folder\u2009\u2014\u2009this keeps the focus on camera photos.</string>
     <string name="permission_denied_message">hued needs your photos to show your colors</string>
-    <string name="partial_access_note">Results reflect selected photos</string>
+    <string name="partial_access_note">results reflect selected photos only</string>
 
     <!-- Empty states -->
-    <string name="no_photos_message">Take some photos and come back — your colors are waiting.</string>
+    <string name="no_photos_message">No colors for this period yet\u2009\u2014\u2009keep taking photos.</string>
+    <string name="no_photos_partial">No colors for this period\u2009\u2014\u2009try granting access to more photos.</string>
+    <string name="permission_needed">Gallery access needed to discover your colors.</string>
+    <string name="refreshing_palette">Refreshing your palette\u2026</string>
 
     <!-- Processing -->
-    <string name="processing_notification">Building your color history…</string>
+    <string name="processing_notification">Building your color history\u2026</string>
+    <string name="scanning_gallery">Scanning your gallery\u2026</string>
+    <string name="processing_progress">%1$d of %2$d images</string>
+
+    <!-- Periods -->
+    <string name="this_week">this week</string>
+    <string name="this_month">this month</string>
+    <string name="this_year">this year</string>
+    <string name="earlier">earlier</string>
+
+    <!-- Share -->
+    <string name="share">share</string>
+    <string name="save">save</string>
+    <string name="close">close</string>
+    <string name="saved_to_gallery">Saved to Pictures/hued</string>
+    <string name="save_failed">Could not save image</string>
+
+    <!-- Settings -->
+    <string name="settings">settings</string>
+    <string name="done">done</string>
+    <string name="options">options</string>
+    <string name="palette_depth">palette depth</string>
+    <string name="palette_depth_value">%d colors</string>
+    <string name="weighted_bands">weighted bands</string>
+    <string name="photo_sources">photo sources</string>
+    <string name="photo_sources_hint">choose which folders hued reads from</string>
+    <string name="apply_changes">apply changes?</string>
+    <string name="reprocess_message">reprocessing will regenerate all palettes with your new settings.</string>
+    <string name="reprocess_all">reprocess all</string>
+    <string name="discard">discard</string>
+    <string name="version">hued v1.0.0</string>
+
+    <!-- Onboarding -->
+    <string name="show_me_my_colors">show me my colors</string>
 </resources>

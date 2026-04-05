@@ -1,6 +1,7 @@
 package app.hued.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,12 +24,20 @@ fun PaletteStrip(
     height: Dp = 80.dp,
     cornerRadius: Dp = 4.dp,
     colorNames: List<String> = emptyList(),
+    colorWeights: List<Float> = emptyList(),
+    useWeightedBands: Boolean = false,
 ) {
     val description = if (colorNames.isNotEmpty()) {
         "Palette: ${colorNames.joinToString(", ")}"
     } else {
         "Palette: ${colors.size} colors"
     }
+
+    if (colors.isEmpty()) return
+
+    val hasValidWeights = useWeightedBands &&
+        colorWeights.size == colors.size &&
+        colorWeights.all { it > 0f }
 
     Row(
         modifier = modifier
@@ -37,10 +46,11 @@ fun PaletteStrip(
             .clip(RoundedCornerShape(cornerRadius))
             .semantics { contentDescription = description },
     ) {
-        colors.forEach { color ->
-            androidx.compose.foundation.layout.Box(
+        colors.forEachIndexed { index, color ->
+            val weight = if (hasValidWeights) colorWeights[index] else 1f
+            Box(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(weight)
                     .height(height)
                     .background(color),
             )
@@ -50,17 +60,13 @@ fun PaletteStrip(
 
 @Preview(showBackground = true, backgroundColor = 0xFFF8F7F5)
 @Composable
-private fun PaletteStripHeroPreview() {
+private fun PaletteStripPreview() {
     HuedTheme {
         PaletteStrip(
             colors = listOf(
-                Color(0xFFD4764E),
-                Color(0xFFC4956A),
-                Color(0xFF8B6F4E),
-                Color(0xFFE8A87C),
-                Color(0xFFD4A574),
+                Color(0xFFD4764E), Color(0xFFC4956A), Color(0xFF8B6F4E),
+                Color(0xFFE8A87C), Color(0xFFD4A574),
             ),
-            colorNames = listOf("Burnt Sienna", "Desert Sand", "Driftwood", "Peach Bloom", "Warm Clay"),
             height = 80.dp,
         )
     }
@@ -68,34 +74,16 @@ private fun PaletteStripHeroPreview() {
 
 @Preview(showBackground = true, backgroundColor = 0xFFF8F7F5)
 @Composable
-private fun PaletteStripExpandedPreview() {
+private fun PaletteStripWeightedPreview() {
     HuedTheme {
         PaletteStrip(
             colors = listOf(
-                Color(0xFF4A7B9D),
-                Color(0xFF5B8FA8),
-                Color(0xFF6B9DB8),
-                Color(0xFF7BABC4),
-                Color(0xFF8BB8D0),
+                Color(0xFFD4764E), Color(0xFFC4956A), Color(0xFF8B6F4E),
+                Color(0xFFE8A87C), Color(0xFFD4A574),
             ),
-            height = 120.dp,
-        )
-    }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFFF8F7F5)
-@Composable
-private fun PaletteStripHistoryPreview() {
-    HuedTheme {
-        PaletteStrip(
-            colors = listOf(
-                Color(0xFF3D5A80),
-                Color(0xFF4A6D8C),
-                Color(0xFF5780A0),
-                Color(0xFF6493B4),
-            ),
-            height = 40.dp,
-            cornerRadius = 3.dp,
+            colorWeights = listOf(0.4f, 0.25f, 0.15f, 0.12f, 0.08f),
+            useWeightedBands = true,
+            height = 80.dp,
         )
     }
 }

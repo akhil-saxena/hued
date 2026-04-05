@@ -2,6 +2,7 @@ package app.hued.notification
 
 import android.content.Context
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import app.hued.processing.ProcessingWorker
@@ -38,14 +39,23 @@ class NotificationScheduler @Inject constructor(
             initialDelay.toMinutes()
         }
 
-        val workRequest = PeriodicWorkRequestBuilder<ProcessingWorker>(7, TimeUnit.DAYS)
+        // Chain: ProcessingWorker (scan new photos) → MondayNotificationWorker (notify + update widget)
+        val processWork = OneTimeWorkRequestBuilder<ProcessingWorker>()
             .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
             .build()
 
+        val notifyWork = PeriodicWorkRequestBuilder<MondayNotificationWorker>(7, TimeUnit.DAYS)
+            .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
+            .build()
+
+        // Enqueue the periodic notification worker
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WEEKLY_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
-            workRequest,
+            notifyWork,
         )
+
+        // Also enqueue a one-time processing worker aligned to same schedule
+        WorkManager.getInstance(context).enqueue(processWork)
     }
 }

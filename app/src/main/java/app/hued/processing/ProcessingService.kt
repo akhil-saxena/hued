@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import app.hued.R
+import app.hued.data.DevToolsSettingsProvider
 import app.hued.data.local.entity.PaletteResultEntity
 import app.hued.data.local.entity.ProcessingCheckpointEntity
 import app.hued.data.model.TimePeriod
@@ -38,6 +39,7 @@ class ProcessingService : Service() {
     @Inject lateinit var paletteExtractor: PaletteExtractor
     @Inject lateinit var colorAggregator: ColorAggregator
     @Inject lateinit var paletteRepository: PaletteRepository
+    @Inject lateinit var devToolsSettingsProvider: DevToolsSettingsProvider
     @Inject @DefaultDispatcher lateinit var defaultDispatcher: CoroutineDispatcher
     @Inject @IoDispatcher lateinit var ioDispatcher: CoroutineDispatcher
 
@@ -65,13 +67,25 @@ class ProcessingService : Service() {
         return START_STICKY
     }
 
-    private suspend fun processGallery() {
-        val excludedFolders = withContext(ioDispatcher) {
-            paletteRepository.getExcludedFolders()
-        }
+    private var paletteDepth: Int = 5
 
+    private suspend fun processGallery() {
+        paletteDepth = devToolsSettingsProvider.getCurrent().paletteDepth
+
+        // On first run, pre-exclude known junk folders
         val checkpoint = withContext(ioDispatcher) {
             paletteRepository.getCheckpoint()
+        }
+        if (checkpoint == null) {
+            withContext(ioDispatcher) {
+                app.hued.data.model.DEFAULT_EXCLUDED_FOLDERS.forEach { folder ->
+                    paletteRepository.addExcludedFolder(folder)
+                }
+            }
+        }
+
+        val excludedFolders = withContext(ioDispatcher) {
+            paletteRepository.getExcludedFolders()
         }
 
         val sinceTimestamp = checkpoint?.lastTimestamp ?: 0L
@@ -82,12 +96,13 @@ class ProcessingService : Service() {
 
         if (images.isEmpty()) return
 
-        val totalFound = images.size
-        var totalProcessed = checkpoint?.totalProcessed ?: 0
+        val alreadyProcessed = checkpoint?.totalProcessed ?: 0
+        val totalFound = images.size + alreadyProcessed
+        var totalProcessed = alreadyProcessed
 
         for ((index, image) in images.withIndex()) {
             val extracted = withContext(defaultDispatcher) {
-                paletteExtractor.extract(image.uri)
+                paletteExtractor.extract(image.uri, paletteDepth)
             } ?: continue
 
             val entity = PaletteResultEntity(
@@ -103,7 +118,8 @@ class ProcessingService : Service() {
 
             totalProcessed++
 
-            if (totalProcessed % 20 == 0 || index == images.lastIndex) {
+            // Save checkpoint every 5 images for progress tracking
+            if (totalProcessed % 5 == 0 || index == images.lastIndex) {
                 withContext(ioDispatcher) {
                     paletteRepository.saveCheckpoint(
                         ProcessingCheckpointEntity(
@@ -117,14 +133,17 @@ class ProcessingService : Service() {
                 }
 
                 updateNotification("Building your color history... ${totalProcessed}/${totalFound}")
+            }
 
-                // Aggregate progressively so UI populates during processing
+            // Aggregate periodically (every 100 images) and always at the end
+            if (totalProcessed % 100 == 0 || index == images.lastIndex) {
                 aggregateAllPeriods()
             }
         }
     }
 
     private suspend fun aggregateAllPeriods() {
+        // Each period is upserted individually in aggregatePeriod() — no bulk delete needed
         val now = LocalDate.now()
         val zone = ZoneId.systemDefault()
 
@@ -142,14 +161,6 @@ class ProcessingService : Service() {
             val monthEnd = monthStart.plusMonths(1)
             aggregatePeriod(TimePeriod.MONTH, monthStart, monthEnd, zone)
             monthStart = monthStart.minusMonths(1)
-        }
-
-        // Aggregate SEASONS — go back 8 seasons
-        var seasonStart = app.hued.util.DateUtils.startOfSeason(now)
-        repeat(8) {
-            val seasonEnd = seasonStart.plusMonths(3)
-            aggregatePeriod(TimePeriod.SEASON, seasonStart, seasonEnd, zone)
-            seasonStart = seasonStart.minusMonths(3)
         }
 
         // Aggregate YEARS — go back 3 years
@@ -176,9 +187,11 @@ class ProcessingService : Service() {
 
         if (results.isNotEmpty()) {
             val palette = withContext(defaultDispatcher) {
-                colorAggregator.aggregate(results, type, start, end)
+                colorAggregator.aggregate(results, type, start, end, paletteDepth)
             }
             withContext(ioDispatcher) {
+                // Delete existing row for this period before inserting to avoid duplicates
+                paletteRepository.deletePaletteForPeriod(type, start.toEpochDay())
                 paletteRepository.savePalette(palette)
             }
         }

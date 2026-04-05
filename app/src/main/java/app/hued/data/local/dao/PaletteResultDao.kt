@@ -4,8 +4,14 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.ColumnInfo
 import app.hued.data.local.entity.PaletteResultEntity
 import kotlinx.coroutines.flow.Flow
+
+data class FolderCount(
+    @ColumnInfo(name = "folderPath") val folderPath: String,
+    @ColumnInfo(name = "photoCount") val photoCount: Int,
+)
 
 @Dao
 interface PaletteResultDao {
@@ -28,6 +34,9 @@ interface PaletteResultDao {
 
     @Query("SELECT COUNT(*) FROM PaletteResult")
     fun getTotalCount(): Flow<Int>
+
+    @Query("SELECT folderPath, COUNT(*) as photoCount FROM PaletteResult GROUP BY folderPath ORDER BY photoCount DESC")
+    suspend fun getFolderCounts(): List<FolderCount>
 
     @Query("DELETE FROM PaletteResult")
     suspend fun deleteAll()

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import app.hued.data.DevToolsSettingsProvider
 import app.hued.data.local.entity.PaletteResultEntity
 import app.hued.data.model.TimePeriod
 import app.hued.data.repository.PaletteRepository
@@ -24,11 +25,15 @@ class ProcessingWorker @AssistedInject constructor(
     private val paletteExtractor: PaletteExtractor,
     private val colorAggregator: ColorAggregator,
     private val paletteRepository: PaletteRepository,
+    private val devToolsSettingsProvider: DevToolsSettingsProvider,
 ) : CoroutineWorker(appContext, workerParams) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun doWork(): Result {
+        val settings = devToolsSettingsProvider.getCurrent()
+        val paletteDepth = settings.paletteDepth
+
         val checkpoint = paletteRepository.getCheckpoint()
         val sinceTimestamp = checkpoint?.lastTimestamp ?: 0L
         val excludedFolders = paletteRepository.getExcludedFolders()
@@ -37,7 +42,7 @@ class ProcessingWorker @AssistedInject constructor(
         if (images.isEmpty()) return Result.success()
 
         for (image in images) {
-            val extracted = paletteExtractor.extract(image.uri) ?: continue
+            val extracted = paletteExtractor.extract(image.uri, paletteDepth) ?: continue
             val entity = PaletteResultEntity(
                 imageUri = image.uri.toString(),
                 timestamp = image.timestamp,
@@ -48,12 +53,12 @@ class ProcessingWorker @AssistedInject constructor(
         }
 
         // Re-aggregate current week
-        aggregateCurrentWeek()
+        aggregateCurrentWeek(paletteDepth)
 
         return Result.success()
     }
 
-    private suspend fun aggregateCurrentWeek() {
+    private suspend fun aggregateCurrentWeek(maxColors: Int) {
         val now = LocalDate.now()
         val weekFields = WeekFields.of(Locale.getDefault())
         val startOfWeek = now.with(weekFields.dayOfWeek(), 1)
@@ -64,7 +69,8 @@ class ProcessingWorker @AssistedInject constructor(
 
         val results = paletteRepository.getResultsForPeriod(startTimestamp, endTimestamp)
         if (results.isNotEmpty()) {
-            val palette = colorAggregator.aggregate(results, TimePeriod.WEEK, startOfWeek, endOfWeek)
+            val palette = colorAggregator.aggregate(results, TimePeriod.WEEK, startOfWeek, endOfWeek, maxColors)
+            paletteRepository.deletePaletteForPeriod(TimePeriod.WEEK, startOfWeek.toEpochDay())
             paletteRepository.savePalette(palette)
         }
     }

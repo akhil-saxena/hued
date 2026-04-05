@@ -13,30 +13,24 @@ val LocalHuedAccent = compositionLocalOf { Color.Unspecified }
 
 @Composable
 fun HuedTheme(
-    paletteColors: List<Color> = emptyList(),
     content: @Composable () -> Unit,
 ) {
-    val dominantColor = paletteColors.firstOrNull()
-    val canvas = dominantColor?.let { deriveCanvasTint(it) } ?: HuedCanvasResting
-    val mutedText = dominantColor?.let { deriveMutedTextColor(it) } ?: HuedTextMutedResting
-    val accent = dominantColor ?: Color.Unspecified
-
     val colorScheme = lightColorScheme(
         primary = HuedTextPrimary,
-        onPrimary = canvas,
-        secondary = mutedText,
-        background = canvas,
+        onPrimary = HuedCanvasResting,
+        secondary = HuedTextMutedResting,
+        background = HuedCanvasResting,
         onBackground = HuedTextPrimary,
-        surface = canvas,
+        surface = HuedCanvasResting,
         onSurface = HuedTextPrimary,
-        surfaceVariant = canvas,
-        onSurfaceVariant = mutedText,
+        surfaceVariant = HuedCanvasResting,
+        onSurfaceVariant = HuedTextMutedResting,
     )
 
     CompositionLocalProvider(
-        LocalHuedCanvas provides canvas,
-        LocalHuedTextMuted provides mutedText,
-        LocalHuedAccent provides accent,
+        LocalHuedCanvas provides HuedCanvasResting,
+        LocalHuedTextMuted provides HuedTextMutedResting,
+        LocalHuedAccent provides Color.Unspecified,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

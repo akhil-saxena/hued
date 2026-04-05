@@ -1,6 +1,7 @@
 package app.hued.di
 
 import android.content.Context
+import app.hued.data.DevToolsSettingsProvider
 import app.hued.processing.ColorAggregator
 import app.hued.processing.ColorNamer
 import app.hued.processing.GalleryScanner
@@ -19,6 +20,11 @@ object ProcessingModule {
 
     @Provides
     @Singleton
+    fun provideDevToolsSettingsProvider(@ApplicationContext context: Context): DevToolsSettingsProvider =
+        DevToolsSettingsProvider(context)
+
+    @Provides
+    @Singleton
     fun provideGalleryScanner(@ApplicationContext context: Context): GalleryScanner =
         GalleryScanner(context)
 
@@ -34,8 +40,9 @@ object ProcessingModule {
 
     @Provides
     @Singleton
-    fun providePoeticDescriptionMatcher(@ApplicationContext context: Context): PoeticDescriptionMatcher =
-        PoeticDescriptionMatcher(context)
+    fun providePoeticDescriptionMatcher(
+        @ApplicationContext context: Context,
+    ): PoeticDescriptionMatcher = PoeticDescriptionMatcher(context)
 
     @Provides
     @Singleton
