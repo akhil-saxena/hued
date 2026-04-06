@@ -17,6 +17,11 @@ data class ImageReference(
     val folderPath: String,
 )
 
+data class FolderInfo(
+    val path: String,
+    val imageCount: Int,
+)
+
 class GalleryScanner @Inject constructor(
     private val context: Context,
 ) {
@@ -83,6 +88,35 @@ class GalleryScanner @Inject constructor(
         }
 
         return images
+    }
+
+    /**
+     * Queries MediaStore for all unique folder paths and their image counts.
+     * Used on launch to detect new folders the user hasn't seen yet.
+     */
+    fun discoverAllFolders(): List<FolderInfo> {
+        val folderCounts = mutableMapOf<String, Int>()
+        val contentResolver = context.contentResolver
+
+        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        }
+
+        val projection = arrayOf(MediaStore.Images.Media.DATA)
+
+        val cursor = contentResolver.query(collection, projection, null, null, null)
+        cursor?.use {
+            val dataColumn = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+            while (it.moveToNext()) {
+                val filePath = it.getString(dataColumn) ?: continue
+                val folder = filePath.substringBeforeLast("/")
+                folderCounts[folder] = (folderCounts[folder] ?: 0) + 1
+            }
+        }
+
+        return folderCounts.map { (path, count) -> FolderInfo(path, count) }
     }
 
     private val filenameTimestampPattern = Regex("""(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})""")

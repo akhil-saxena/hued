@@ -30,6 +30,7 @@ import app.hued.ui.main.MainEvent
 import app.hued.ui.main.MainScreen
 import app.hued.ui.main.MainViewModel
 import app.hued.ui.onboarding.OnboardingScreen
+import app.hued.ui.folders.NewFoldersDialog
 import app.hued.ui.share.ShareOverlay
 import app.hued.ui.theme.HuedCanvasResting
 import app.hued.ui.theme.HuedTextPrimary
@@ -72,6 +73,18 @@ fun HuedApp(openWeekly: Boolean = false) {
             )
         } else {
             MainScreen(viewModel = viewModel)
+        }
+
+        // New folders dialog
+        if (state.showNewFoldersDialog && state.newFolders.isNotEmpty()) {
+            NewFoldersDialog(
+                folders = state.newFolders,
+                onToggle = { path, include ->
+                    viewModel.onEvent(MainEvent.ToggleNewFolder(path, include))
+                },
+                onConfirm = { viewModel.onEvent(MainEvent.ConfirmNewFolders) },
+                onDismiss = { viewModel.onEvent(MainEvent.DismissNewFolders) },
+            )
         }
 
         // Share overlay — shown when shareTarget is set

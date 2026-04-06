@@ -33,6 +33,8 @@ data class MainUiState(
     val shareTargetPeriod: TimePeriod? = null,
     val folders: List<FolderUiState> = emptyList(),
     val showSettings: Boolean = false,
+    val newFolders: List<FolderUiState> = emptyList(),
+    val showNewFoldersDialog: Boolean = false,
 )
 
 sealed interface MainEvent {
@@ -47,4 +49,7 @@ sealed interface MainEvent {
     data object HideSettings : MainEvent
     data class ToggleFolder(val path: String, val include: Boolean) : MainEvent
     data object ReprocessGallery : MainEvent
+    data class ToggleNewFolder(val path: String, val include: Boolean) : MainEvent
+    data object ConfirmNewFolders : MainEvent
+    data object DismissNewFolders : MainEvent
 }

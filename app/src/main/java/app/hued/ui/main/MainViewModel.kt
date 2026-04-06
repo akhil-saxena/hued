@@ -13,6 +13,7 @@ import app.hued.data.model.ProcessingState
 import app.hued.data.model.TimePeriod
 import app.hued.data.repository.PaletteRepository
 import app.hued.processing.ColorNamer
+import app.hued.processing.GalleryScanner
 import app.hued.processing.PermissionStateManager
 import app.hued.processing.ProcessingService
 import app.hued.util.DateUtils
@@ -21,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +47,7 @@ class MainViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val paletteRepository: PaletteRepository,
     private val permissionStateManager: PermissionStateManager,
+    private val galleryScanner: GalleryScanner,
     private val colorNamer: ColorNamer,
     private val devToolsSettingsProvider: DevToolsSettingsProvider,
     private val notificationScheduler: app.hued.notification.NotificationScheduler,
@@ -121,6 +124,11 @@ class MainViewModel @Inject constructor(
             val prefs = context.dataStore.data.first()
             val onboarded = prefs[ONBOARDING_COMPLETE] ?: false
             _localState.update { it.copy(hasCompletedOnboarding = onboarded, isInitialized = true) }
+
+            // After init, check for new folders & images if already onboarded with permissions
+            if (onboarded && permissionStateManager.state.value != PermissionState.NotRequested) {
+                checkForUpdates()
+            }
         }
         // Load favorite color + detect patterns
         viewModelScope.launch {
@@ -197,21 +205,59 @@ class MainViewModel @Inject constructor(
                     context.startForegroundService(intent)
                 }
             }
+            is MainEvent.ToggleNewFolder -> {
+                _localState.update { state ->
+                    val updated = state.newFolders.map { folder ->
+                        if (folder.path == event.path) folder.copy(isIncluded = event.include)
+                        else folder
+                    }
+                    state.copy(newFolders = updated)
+                }
+            }
+            is MainEvent.ConfirmNewFolders -> {
+                viewModelScope.launch {
+                    val state = _localState.value
+                    // Exclude folders the user unchecked
+                    state.newFolders.filter { !it.isIncluded }.forEach { folder ->
+                        paletteRepository.addExcludedFolder(folder.path)
+                    }
+                    _localState.update { it.copy(showNewFoldersDialog = false, newFolders = emptyList()) }
+                    // Kick off incremental processing for newly included images
+                    startIncrementalProcessing()
+                }
+            }
+            is MainEvent.DismissNewFolders -> {
+                viewModelScope.launch {
+                    // Exclude all new folders if user dismisses
+                    val state = _localState.value
+                    state.newFolders.forEach { folder ->
+                        paletteRepository.addExcludedFolder(folder.path)
+                    }
+                    _localState.update { it.copy(showNewFoldersDialog = false, newFolders = emptyList()) }
+                }
+            }
         }
     }
 
     private suspend fun loadFolders() {
-        val folderCounts = paletteRepository.getFolderCounts()
         val excludedPaths = paletteRepository.getExcludedFolders()
-        val folderStates = folderCounts.map { fc ->
-            val displayName = fc.folderPath.substringAfterLast("/").ifEmpty { fc.folderPath }
-            app.hued.ui.folders.FolderUiState(
-                path = fc.folderPath,
-                displayName = displayName,
-                photoCount = fc.photoCount,
-                isIncluded = fc.folderPath !in excludedPaths,
-            )
+        val deviceFolders = withContext(Dispatchers.IO) {
+            galleryScanner.discoverAllFolders()
         }
+
+        // Only show folders that currently exist on the device
+        val deviceMap = deviceFolders.associate { it.path to it.imageCount }
+
+        val folderStates = deviceMap.keys.map { path ->
+            val displayName = path.substringAfterLast("/").ifEmpty { path }
+            app.hued.ui.folders.FolderUiState(
+                path = path,
+                displayName = displayName,
+                photoCount = deviceMap[path] ?: 0,
+                isIncluded = excludedPaths.none { path.contains(it, ignoreCase = true) },
+            )
+        }.sortedByDescending { it.photoCount }
+
         _localState.update { it.copy(folders = folderStates) }
     }
 
@@ -238,5 +284,45 @@ class MainViewModel @Inject constructor(
 
     fun clearShareTarget() {
         _localState.update { it.copy(shareTarget = null, shareTargetPeriod = null) }
+    }
+
+    private suspend fun checkForUpdates() {
+        val allDeviceFolders = withContext(Dispatchers.IO) {
+            galleryScanner.discoverAllFolders()
+        }
+        val excludedPaths = withContext(Dispatchers.IO) {
+            paletteRepository.getExcludedFolders()
+        }
+        val knownFolders = withContext(Dispatchers.IO) {
+            paletteRepository.getFolderCounts().map { it.folderPath }.toSet()
+        }
+
+        // Folders on device that we haven't seen and aren't already excluded
+        val newFolders = allDeviceFolders.filter { folder ->
+            folder.path !in knownFolders &&
+                excludedPaths.none { folder.path.contains(it, ignoreCase = true) }
+        }
+
+        if (newFolders.isNotEmpty()) {
+            val folderStates = newFolders.map { folder ->
+                app.hued.ui.folders.FolderUiState(
+                    path = folder.path,
+                    displayName = folder.path.substringAfterLast("/").ifEmpty { folder.path },
+                    photoCount = folder.imageCount,
+                    isIncluded = true,
+                )
+            }
+            _localState.update {
+                it.copy(newFolders = folderStates, showNewFoldersDialog = true)
+            }
+        } else {
+            // No new folders — just process any new images from existing folders
+            startIncrementalProcessing()
+        }
+    }
+
+    private fun startIncrementalProcessing() {
+        val intent = Intent(context, ProcessingService::class.java)
+        context.startForegroundService(intent)
     }
 }

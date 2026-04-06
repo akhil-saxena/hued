@@ -20,7 +20,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -87,14 +86,17 @@ fun SettingsScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showDoneDialog = false; onReprocess() }) {
-                    Text("reprocess all", color = MaterialTheme.colorScheme.onBackground)
-                }
+                PillButton(
+                    text = "reprocess all",
+                    onClick = { showDoneDialog = false; onReprocess() },
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showDoneDialog = false; onClose() }) {
-                    Text("discard", color = LocalHuedTextMuted.current)
-                }
+                PillButton(
+                    text = "discard",
+                    onClick = { showDoneDialog = false; onClose() },
+                    color = LocalHuedTextMuted.current,
+                )
             },
         )
     }
