@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — hued</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Outfit', -apple-system, sans-serif;
+    background: #F8F7F5;
+    color: #1a1a1a;
+    line-height: 1.7;
+    padding: 60px 24px 80px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .wordmark {
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-weight: 300;
+    font-size: 32px;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+  .updated {
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 40px;
+  }
+  h2 {
+    font-weight: 600;
+    font-size: 18px;
+    margin-top: 36px;
+    margin-bottom: 12px;
+  }
+  p { margin-bottom: 16px; }
+  ul {
+    margin: 0 0 16px 24px;
+  }
+  li { margin-bottom: 6px; }
+  strong { font-weight: 600; }
+  a { color: #1a1a1a; }
+  .contact {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    font-size: 14px;
+    color: #999;
+  }
+  .contact a { color: #666; }
+</style>
+</head>
+<body>
+
+<div class="wordmark">hued</div>
+<h1>Privacy Policy</h1>
+<p class="updated">Last updated: April 5, 2026</p>
+
+<h2>Overview</h2>
+<p>hued is designed with privacy as a core principle. All image processing happens entirely on your device. Your photos never leave your phone.</p>
+
+<h2>Data Collection</h2>
+<p>hued does not collect, transmit, or store any personal data on external servers.</p>
+<p>Specifically, hued does <strong>not</strong>:</p>
+<ul>
+  <li>Upload your photos or any image data to any server</li>
+  <li>Use analytics, tracking, or telemetry services</li>
+  <li>Require an account or authentication</li>
+  <li>Access the internet (no network permissions requested)</li>
+  <li>Share any data with third parties</li>
+  <li>Use advertising SDKs</li>
+</ul>
+
+<h2>Data Stored on Device</h2>
+<p>hued stores the following data locally on your device:</p>
+<ul>
+  <li><strong>Color data</strong> — Dominant colors extracted from your photos (hex color codes only, not image data)</li>
+  <li><strong>Palette metadata</strong> — Aggregated color palettes per time period, photo counts, poetic descriptions</li>
+  <li><strong>Processing state</strong> — Checkpoint data to resume scanning after interruption</li>
+  <li><strong>Settings</strong> — Your preferences for palette depth, weighted bands, and folder exclusions</li>
+  <li><strong>Folder paths</strong> — Which folders to include or exclude from scanning</li>
+</ul>
+<p>All data is stored in an app-private Room database that other apps cannot access.</p>
+
+<h2>Photo Access</h2>
+<p>hued requests permission to read your photo gallery in order to extract color information. hued reads image pixels only to determine dominant colors. No image data is stored, cached, or transmitted. Only the extracted hex color codes are saved.</p>
+<p>On Android 14+, hued supports partial photo access. You can choose which photos hued can see.</p>
+
+<h2>Share Cards</h2>
+<p>When you share a palette card, hued generates a PNG image containing only color data and text (no photos). This image is shared via Android's standard share intent. The image is temporarily cached on device and cleaned up on next app launch.</p>
+
+<h2>Data Deletion</h2>
+<p>Uninstalling hued removes all stored data. You can also reprocess your gallery from Settings, which clears all existing data and starts fresh.</p>
+
+<h2>Children's Privacy</h2>
+<p>hued does not knowingly collect data from children under 13. The app contains no user-generated content, social features, or data collection.</p>
+
+<h2>Changes to This Policy</h2>
+<p>Updates to this privacy policy will be reflected in the app and on this page with a new "Last updated" date.</p>
+
+<div class="contact">
+  Questions? Contact <a href="mailto:saxena.akhil42@gmail.com">saxena.akhil42@gmail.com</a>
+</div>
+
+</body>
+</html>

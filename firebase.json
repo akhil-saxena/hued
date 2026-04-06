@@ -1,0 +1,11 @@
+{
+  "hosting": {
+    "public": "docs",
+    "ignore": ["firebase.json", "**/.*"],
+    "rewrites": [
+      { "source": "/", "destination": "/privacy-policy.html" },
+      { "source": "/privacy", "destination": "/privacy-policy.html" },
+      { "source": "/privacy-policy", "destination": "/privacy-policy.html" }
+    ]
+  }
+}
