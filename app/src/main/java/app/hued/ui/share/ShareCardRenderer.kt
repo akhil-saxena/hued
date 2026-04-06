@@ -63,8 +63,8 @@ object ShareCardRenderer {
 
     // Colors — from Color.kt
     private val TEXT = android.graphics.Color.rgb(0x2A, 0x28, 0x26)       // HuedTextPrimary
-    private val MUTED = android.graphics.Color.rgb(0x8A, 0x88, 0x85)      // HuedTextMutedResting
-    private val MUTED_LIGHT = android.graphics.Color.argb(0x99, 0x8A, 0x88, 0x85)
+    private val MUTED = android.graphics.Color.rgb(0x50, 0x4E, 0x4C)      // HuedTextMutedResting
+    private val MUTED_LIGHT = android.graphics.Color.argb(0xBB, 0x50, 0x4E, 0x4C)
 
     fun renderAndShare(
         context: Context,
@@ -180,9 +180,9 @@ object ShareCardRenderer {
         y = stripY + STRIP_H + gap3 + BODY_SIZE
         canvas.drawText("\u201c${palette.poeticDescription}\u201d", cx, y, paint)
 
-        // Top 3 color swatches + names
+        // Top color swatch + name
         y += gap3
-        y = drawTopColorSwatches(canvas, palette, 3, cx, y, fonts)
+        y = drawTopColorSwatches(canvas, palette, 1, cx, y, fonts)
 
         drawWordmark(canvas, fonts)
     }
@@ -232,9 +232,9 @@ object ShareCardRenderer {
         y = stripY + STRIP_H_YEAR + gap2 + BODY_SIZE
         canvas.drawText("\u201c${palette.poeticDescription}\u201d", cx, y, paint)
 
-        // Top 3 color swatches + names
+        // Top color swatch + name
         y += gap3
-        y = drawTopColorSwatches(canvas, palette, 3, cx, y, fonts)
+        y = drawTopColorSwatches(canvas, palette, 1, cx, y, fonts)
 
         // Stats — bodyMedium
         if (palette.photoCount > 0) {

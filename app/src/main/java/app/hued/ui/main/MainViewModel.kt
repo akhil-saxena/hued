@@ -103,8 +103,10 @@ class MainViewModel @Inject constructor(
         }
 
         val processingState = when {
-            checkpoint != null && !checkpoint.isComplete ->
+            checkpoint != null && !checkpoint.isComplete && !checkpoint.currentYearDone ->
                 ProcessingState.InitialProcessing(checkpoint.totalFound, checkpoint.totalProcessed)
+            checkpoint != null && !checkpoint.isComplete && checkpoint.currentYearDone ->
+                ProcessingState.UpdatingHistory(checkpoint.totalFound, checkpoint.totalProcessed)
             checkpoint != null && checkpoint.isComplete -> ProcessingState.Ready
             else -> local.processingState
         }
@@ -113,6 +115,7 @@ class MainViewModel @Inject constructor(
             permissionState = permState,
             processingState = processingState,
             useWeightedBands = devSettings.weightedBands,
+            showAllColorNames = devSettings.showAllColorNames,
             currentPalette = paletteUiList.firstOrNull(),
             history = paletteUiList.drop(1),
         )
@@ -182,7 +185,11 @@ class MainViewModel @Inject constructor(
             is MainEvent.ToggleFolder -> {
                 viewModelScope.launch {
                     if (event.include) {
+                        // Remove both the full path AND any default exclusion that matches
                         paletteRepository.removeExcludedFolder(event.path)
+                        val excludedPaths = paletteRepository.getExcludedFolders()
+                        excludedPaths.filter { event.path.contains(it, ignoreCase = true) }
+                            .forEach { paletteRepository.removeExcludedFolder(it) }
                     } else {
                         paletteRepository.addExcludedFolder(event.path)
                     }
@@ -316,8 +323,16 @@ class MainViewModel @Inject constructor(
                 it.copy(newFolders = folderStates, showNewFoldersDialog = true)
             }
         } else {
-            // No new folders — just process any new images from existing folders
-            startIncrementalProcessing()
+            // No new folders — check if there are actually new images before starting service
+            val checkpoint = withContext(Dispatchers.IO) { paletteRepository.getCheckpoint() }
+            val sinceTimestamp = checkpoint?.lastTimestamp ?: 0L
+            val excludedFolders = withContext(Dispatchers.IO) { paletteRepository.getExcludedFolders() }
+            val newImages = withContext(Dispatchers.IO) {
+                galleryScanner.scanGallery(excludedFolders, sinceTimestamp)
+            }
+            if (newImages.isNotEmpty()) {
+                startIncrementalProcessing()
+            }
         }
     }
 

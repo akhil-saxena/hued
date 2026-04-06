@@ -84,6 +84,7 @@ private fun MainScreenContent(
     val currentIndex = periods.indexOf(state.activePeriod)
 
     val isProcessing = state.processingState is ProcessingState.InitialProcessing
+    val isUpdatingHistory = state.processingState is ProcessingState.UpdatingHistory
 
     if (isProcessing) {
         // Full-screen centered processing state — no tabs, no palettes
@@ -94,15 +95,23 @@ private fun MainScreenContent(
             contentAlignment = Alignment.Center,
         ) {
             val processing = state.processingState as ProcessingState.InitialProcessing
-            Text(
-                text = if (processing.totalFound > 0) {
-                    "${processing.totalProcessed} of ${processing.totalFound} images"
-                } else {
-                    "Scanning your gallery\u2026"
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = LocalHuedTextMuted.current,
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "building your color history",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = LocalHuedTextMuted.current,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = if (processing.totalFound > 0) {
+                        "${processing.totalProcessed} of ${processing.totalFound} images"
+                    } else {
+                        "scanning your gallery\u2026"
+                    },
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                    color = LocalHuedTextMuted.current.copy(alpha = 0.5f),
+                )
+            }
         }
         return
     }
@@ -199,6 +208,13 @@ private fun MainScreenContent(
                         )
                     }
                 }
+                if (current.photoCount in 1..4) {
+                    Text(
+                        text = "few photos \u2014 palette may not fully represent this period",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LocalHuedTextMuted.current.copy(alpha = 0.4f),
+                    )
+                }
                 if (state.permissionState is PermissionState.Partial) {
                     Text(
                         text = "results reflect selected photos only",
@@ -253,16 +269,12 @@ private fun MainScreenContent(
                     Column {
                         Spacer(modifier = Modifier.height(10.dp))
                         run {
-                            val indexed = current.colorNames.zip(current.colors)
+                            val top = current.colorNames.zip(current.colors)
                                 .zip(current.colorWeights.ifEmpty { List(current.colors.size) { 1f } })
                                 .map { (nameColor, weight) -> Triple(nameColor.first, nameColor.second, weight) }
                                 .sortedByDescending { it.third }
-                                .take(3)
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                indexed.forEach { (name, color, _) ->
-                                    ColorSwatchRow(name = name, color = color)
-                                }
-                            }
+                                .first()
+                            ColorSwatchRow(name = top.first, color = top.second)
                         }
                     }
                 }
@@ -279,7 +291,8 @@ private fun MainScreenContent(
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        current.colorNames.zip(current.colors).take(5).forEach { (name, color) ->
+                        val colorLimit = if (state.showAllColorNames) current.colorNames.size else 5
+                        current.colorNames.zip(current.colors).take(colorLimit).forEach { (name, color) ->
                             ColorSwatchRow(name = name, color = color)
                             Spacer(modifier = Modifier.height(8.dp))
                         }
@@ -342,11 +355,23 @@ private fun MainScreenContent(
                         .clickable { onEvent(MainEvent.ToggleExpand(palette.id)) }
                         .padding(vertical = 8.dp),
                 ) {
-                    Text(
-                        text = palette.periodLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = LocalHuedTextMuted.current,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = palette.periodLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LocalHuedTextMuted.current,
+                        )
+                        if (palette.photoCount in 1..4) {
+                            Text(
+                                text = "few photos",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LocalHuedTextMuted.current.copy(alpha = 0.35f),
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     PaletteStrip(
                         colors = palette.colors,
@@ -381,12 +406,37 @@ private fun MainScreenContent(
                                 )
                             }
                             Spacer(modifier = Modifier.height(10.dp))
-                            palette.colorNames.zip(palette.colors).take(5).forEach { (name, color) ->
+                            val historyColorLimit = if (state.showAllColorNames) palette.colorNames.size else 5
+                            palette.colorNames.zip(palette.colors).take(historyColorLimit).forEach { (name, color) ->
                                 ColorSwatchRow(name = name, color = color)
                                 Spacer(modifier = Modifier.height(6.dp))
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Processing older data footer
+        if (isUpdatingHistory) {
+            item {
+                val updating = state.processingState as ProcessingState.UpdatingHistory
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = "processing earlier photos\u2026",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = LocalHuedTextMuted.current.copy(alpha = 0.4f),
+                    )
+                    Text(
+                        text = "${updating.totalProcessed} of ${updating.totalFound}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LocalHuedTextMuted.current.copy(alpha = 0.3f),
+                    )
                 }
             }
         }

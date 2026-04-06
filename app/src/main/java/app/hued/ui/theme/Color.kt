@@ -8,12 +8,12 @@ val HuedCanvasResting = Color(0xFFF8F7F5)
 // Primary text
 val HuedTextPrimary = Color(0xFF2A2826)
 
-// Muted text — resting state (no palette)
-val HuedTextMutedResting = Color(0xFF8A8885)
+// Muted text — resting state (no palette) — meets WCAG AAA 7:1 on #F8F7F5
+val HuedTextMutedResting = Color(0xFF504E4C)
 
 // Muted text variants for palette tinting
-val HuedTextMutedWarm = Color(0xFF8A7A6A)
-val HuedTextMutedCool = Color(0xFF6A7A8A)
+val HuedTextMutedWarm = Color(0xFF504538)
+val HuedTextMutedCool = Color(0xFF384A56)
 
 fun deriveCanvasTint(dominantColor: Color, restingCanvas: Color = HuedCanvasResting): Color {
     val warmth = dominantColor.red - dominantColor.blue

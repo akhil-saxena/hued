@@ -158,6 +158,8 @@ fun SettingsScreen(
 
         CompactToggle("weighted bands", settings.weightedBands) { scope.launch { settingsProvider.setWeightedBands(!settings.weightedBands); hasChanges = true } }
 
+        CompactToggle("match color list to depth", settings.showAllColorNames) { scope.launch { settingsProvider.setShowAllColorNames(!settings.showAllColorNames) } }
+
         Spacer(modifier = Modifier.height(16.dp))
         SectionDivider()
         Spacer(modifier = Modifier.height(16.dp))

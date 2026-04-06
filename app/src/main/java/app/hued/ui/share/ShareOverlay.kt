@@ -67,7 +67,7 @@ fun ShareOverlay(
     }
 
     val scrimAlpha by animateFloatAsState(
-        targetValue = if (stage >= 1) 0.7f else 0f,
+        targetValue = if (stage >= 1) 0.85f else 0f,
         animationSpec = tween(300),
         label = "scrim",
     )

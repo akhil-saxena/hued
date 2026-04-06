@@ -53,10 +53,26 @@ class ColorAggregator @Inject constructor(
         // 2. Cluster perceptually similar colors in LAB space
         val clusters = clusterByPerceptualDistance(hexCounts, hexFirstSeen)
 
-        // 3. Take top N clusters by total count (these are the "important" colors)
-        val topByWeight = clusters
-            .sortedByDescending { it.totalCount }
-            .take(maxColors)
+        // 3. Separate colorful clusters from grey/neutral ones
+        val (colorful, neutral) = clusters.partition { cluster ->
+            val hsl = FloatArray(3)
+            ColorUtils.colorToHSL(Color.parseColor(cluster.representativeHex), hsl)
+            hsl[1] >= 0.15f && hsl[2] in 0.10f..0.90f
+        }
+
+        // Prefer colorful clusters, fill remaining with neutrals if needed
+        val ranked = colorful
+            .sortedByDescending { cluster ->
+                val hsl = FloatArray(3)
+                ColorUtils.colorToHSL(Color.parseColor(cluster.representativeHex), hsl)
+                val satBoost = 1.0 + hsl[1].toDouble() * hsl[1].toDouble() * 4.0
+                cluster.totalCount * satBoost
+            }
+        val topByWeight = if (ranked.size >= maxColors) {
+            ranked.take(maxColors)
+        } else {
+            ranked + neutral.sortedByDescending { it.totalCount }.take(maxColors - ranked.size)
+        }
 
         // 4. Sort the strip CHRONOLOGICALLY (by earliest appearance in the period)
         //    This makes the strip read left-to-right as a time journey:

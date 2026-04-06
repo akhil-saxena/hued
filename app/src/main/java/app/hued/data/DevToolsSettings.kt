@@ -14,11 +14,13 @@ import javax.inject.Singleton
 data class DevToolsSettings(
     val paletteDepth: Int = 5,
     val weightedBands: Boolean = false,
+    val showAllColorNames: Boolean = false,
 )
 
 val Context.devToolsDataStore by preferencesDataStore(name = "dev_tools")
 val PALETTE_DEPTH = intPreferencesKey("palette_depth")
 val WEIGHTED_BANDS = booleanPreferencesKey("weighted_bands")
+val SHOW_ALL_COLOR_NAMES = booleanPreferencesKey("show_all_color_names")
 
 @Singleton
 class DevToolsSettingsProvider @Inject constructor(
@@ -28,6 +30,7 @@ class DevToolsSettingsProvider @Inject constructor(
         DevToolsSettings(
             paletteDepth = prefs[PALETTE_DEPTH] ?: 5,
             weightedBands = prefs[WEIGHTED_BANDS] ?: false,
+            showAllColorNames = prefs[SHOW_ALL_COLOR_NAMES] ?: false,
         )
     }
 
@@ -41,4 +44,7 @@ class DevToolsSettingsProvider @Inject constructor(
         context.devToolsDataStore.edit { it[WEIGHTED_BANDS] = value }
     }
 
+    suspend fun setShowAllColorNames(value: Boolean) {
+        context.devToolsDataStore.edit { it[SHOW_ALL_COLOR_NAMES] = value }
+    }
 }

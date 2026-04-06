@@ -72,16 +72,21 @@ class ProcessingService : Service() {
     private suspend fun processGallery() {
         paletteDepth = devToolsSettingsProvider.getCurrent().paletteDepth
 
-        // On first run, pre-exclude known junk folders
-        val checkpoint = withContext(ioDispatcher) {
-            paletteRepository.getCheckpoint()
+        // On very first run, pre-exclude known junk folders
+        // Check excluded folders table — if empty, this is a fresh install
+        val existingExclusions = withContext(ioDispatcher) {
+            paletteRepository.getExcludedFolders()
         }
-        if (checkpoint == null) {
+        if (existingExclusions.isEmpty()) {
             withContext(ioDispatcher) {
                 app.hued.data.model.DEFAULT_EXCLUDED_FOLDERS.forEach { folder ->
                     paletteRepository.addExcludedFolder(folder)
                 }
             }
+        }
+
+        val checkpoint = withContext(ioDispatcher) {
+            paletteRepository.getCheckpoint()
         }
 
         val excludedFolders = withContext(ioDispatcher) {
@@ -90,56 +95,131 @@ class ProcessingService : Service() {
 
         val sinceTimestamp = checkpoint?.lastTimestamp ?: 0L
 
-        val images = withContext(ioDispatcher) {
+        // Images come sorted DATE_TAKEN DESC (newest first)
+        val allImages = withContext(ioDispatcher) {
             galleryScanner.scanGallery(excludedFolders, sinceTimestamp)
         }
 
-        if (images.isEmpty()) return
+        if (allImages.isEmpty()) return
+
+        // Split into current year and older
+        val currentYearStart = LocalDate.of(LocalDate.now().year, 1, 1)
+            .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val currentYearImages = allImages.filter { it.timestamp >= currentYearStart }
+        val olderImages = allImages.filter { it.timestamp < currentYearStart }
 
         val alreadyProcessed = checkpoint?.totalProcessed ?: 0
-        val totalFound = images.size + alreadyProcessed
+        val totalFound = allImages.size + alreadyProcessed
         var totalProcessed = alreadyProcessed
 
-        for ((index, image) in images.withIndex()) {
-            val extracted = withContext(defaultDispatcher) {
-                paletteExtractor.extract(image.uri, paletteDepth)
-            } ?: continue
+        // ── Phase 1: Process current year ──
+        if (currentYearImages.isNotEmpty() && checkpoint?.currentYearDone != true) {
+            for ((index, image) in currentYearImages.withIndex()) {
+                totalProcessed = processImage(image, totalProcessed, totalFound,
+                    isLast = index == currentYearImages.lastIndex && olderImages.isEmpty())
+            }
 
-            val entity = PaletteResultEntity(
-                imageUri = image.uri.toString(),
-                timestamp = image.timestamp,
-                colors = json.encodeToString(extracted.hexColors),
-                folderPath = image.folderPath,
-            )
+            // Aggregate current year periods immediately
+            aggregateCurrentPeriods()
 
+            // Mark current year done — UI will switch from processing to main screen
             withContext(ioDispatcher) {
-                paletteRepository.savePaletteResult(entity)
-            }
-
-            totalProcessed++
-
-            // Save checkpoint every 5 images for progress tracking
-            if (totalProcessed % 5 == 0 || index == images.lastIndex) {
-                withContext(ioDispatcher) {
-                    paletteRepository.saveCheckpoint(
-                        ProcessingCheckpointEntity(
-                            lastMediaStoreId = 0,
-                            lastTimestamp = image.timestamp,
-                            totalProcessed = totalProcessed,
-                            totalFound = totalFound,
-                            isComplete = index == images.lastIndex,
-                        )
+                paletteRepository.saveCheckpoint(
+                    ProcessingCheckpointEntity(
+                        lastMediaStoreId = 0,
+                        lastTimestamp = currentYearImages.last().timestamp,
+                        totalProcessed = totalProcessed,
+                        totalFound = totalFound,
+                        isComplete = olderImages.isEmpty(),
+                        currentYearDone = true,
                     )
-                }
-
-                updateNotification("Building your color history... ${totalProcessed}/${totalFound}")
-            }
-
-            // Aggregate periodically (every 100 images) and always at the end
-            if (totalProcessed % 100 == 0 || index == images.lastIndex) {
-                aggregateAllPeriods()
+                )
             }
         }
+
+        // ── Phase 2: Process older images ──
+        if (olderImages.isNotEmpty()) {
+            for ((index, image) in olderImages.withIndex()) {
+                totalProcessed = processImage(image, totalProcessed, totalFound,
+                    isLast = index == olderImages.lastIndex)
+            }
+
+            // Final full aggregation
+            aggregateAllPeriods()
+        }
+    }
+
+    private suspend fun processImage(
+        image: ImageReference,
+        currentProcessed: Int,
+        totalFound: Int,
+        isLast: Boolean,
+    ): Int {
+        val extracted = withContext(defaultDispatcher) {
+            paletteExtractor.extract(image.uri, paletteDepth)
+        } ?: return currentProcessed
+
+        val entity = PaletteResultEntity(
+            imageUri = image.uri.toString(),
+            timestamp = image.timestamp,
+            colors = json.encodeToString(extracted.hexColors),
+            folderPath = image.folderPath,
+        )
+
+        withContext(ioDispatcher) {
+            paletteRepository.savePaletteResult(entity)
+        }
+
+        val totalProcessed = currentProcessed + 1
+
+        if (totalProcessed % 5 == 0 || isLast) {
+            withContext(ioDispatcher) {
+                paletteRepository.saveCheckpoint(
+                    ProcessingCheckpointEntity(
+                        lastMediaStoreId = 0,
+                        lastTimestamp = image.timestamp,
+                        totalProcessed = totalProcessed,
+                        totalFound = totalFound,
+                        isComplete = isLast,
+                    )
+                )
+            }
+            updateNotification("Building your color history... ${totalProcessed}/${totalFound}")
+        }
+
+        // Aggregate periodically for older images
+        if (totalProcessed % 100 == 0) {
+            aggregateAllPeriods()
+        }
+
+        return totalProcessed
+    }
+
+    private suspend fun aggregateCurrentPeriods() {
+        val now = LocalDate.now()
+        val zone = ZoneId.systemDefault()
+
+        // Current week
+        val weekStart = now.with(WeekFields.of(Locale.getDefault()).dayOfWeek(), 1)
+        aggregatePeriod(TimePeriod.WEEK, weekStart, weekStart.plusDays(7), zone)
+
+        // All weeks in current year
+        var ws = weekStart
+        val yearStart = LocalDate.of(now.year, 1, 1)
+        while (ws.isAfter(yearStart) || ws.isEqual(yearStart)) {
+            aggregatePeriod(TimePeriod.WEEK, ws, ws.plusDays(7), zone)
+            ws = ws.minusWeeks(1)
+        }
+
+        // All months in current year
+        var ms = now.withDayOfMonth(1)
+        while (ms.year == now.year) {
+            aggregatePeriod(TimePeriod.MONTH, ms, ms.plusMonths(1), zone)
+            ms = ms.minusMonths(1)
+        }
+
+        // Current year
+        aggregatePeriod(TimePeriod.YEAR, yearStart, yearStart.plusYears(1), zone)
     }
 
     private suspend fun aggregateAllPeriods() {

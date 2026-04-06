@@ -11,4 +11,5 @@ data class ProcessingCheckpointEntity(
     val totalProcessed: Int,
     val totalFound: Int,
     val isComplete: Boolean,
+    val currentYearDone: Boolean = false,
 )

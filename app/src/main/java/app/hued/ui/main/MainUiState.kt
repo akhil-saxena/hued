@@ -23,6 +23,7 @@ data class MainUiState(
     val history: List<PeriodPaletteUi> = emptyList(),
     val activePeriod: TimePeriod = TimePeriod.WEEK,
     val useWeightedBands: Boolean = false,
+    val showAllColorNames: Boolean = false,
     val expandedPeriodId: Long? = null,
     val processingState: ProcessingState = ProcessingState.Ready,
     val permissionState: PermissionState = PermissionState.NotRequested,

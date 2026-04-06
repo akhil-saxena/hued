@@ -48,18 +48,24 @@ class HuedWidget : GlanceAppWidget() {
     private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val entryPoint = EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
-        val db = entryPoint.database()
+        var hexColors = emptyList<String>()
+        var label = "hued"
 
-        val paletteEntity = withContext(Dispatchers.IO) {
-            db.periodPaletteDao().getLatestByType(TimePeriod.WEEK.name).firstOrNull()
+        try {
+            val entryPoint = EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
+            val db = entryPoint.database()
+
+            val paletteEntity = withContext(Dispatchers.IO) {
+                db.periodPaletteDao().getLatestByType(TimePeriod.WEEK.name).firstOrNull()
+            }
+
+            if (paletteEntity != null) {
+                hexColors = json.decodeFromString<List<String>>(paletteEntity.colors)
+                label = "This week"
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("HuedWidget", "Failed to load palette", e)
         }
-
-        val hexColors = paletteEntity?.let {
-            json.decodeFromString<List<String>>(it.colors)
-        } ?: emptyList()
-
-        val label = if (paletteEntity != null) "This week" else "hued"
 
         provideContent {
             WidgetContent(label = label, hexColors = hexColors)
@@ -71,7 +77,7 @@ class HuedWidget : GlanceAppWidget() {
 private fun WidgetContent(label: String, hexColors: List<String>) {
     val bgColor = ColorProvider(Color(0xFFF8F7F5))
     val textColor = ColorProvider(Color(0xFF2A2826))
-    val mutedColor = ColorProvider(Color(0xFF8A8885))
+    val mutedColor = ColorProvider(Color(0xFF504E4C))
 
     Row(
         modifier = GlanceModifier

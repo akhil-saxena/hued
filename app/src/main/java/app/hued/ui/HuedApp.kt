@@ -13,9 +13,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +54,24 @@ fun HuedApp(openWeekly: Boolean = false) {
     LaunchedEffect(openWeekly) {
         if (openWeekly) {
             viewModel.onEvent(MainEvent.SelectPeriod(app.hued.data.model.TimePeriod.WEEK))
+        }
+    }
+
+    // Request notification permission once after first processing completes
+    var notificationRequested by remember { mutableStateOf(false) }
+    val notificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { /* result ignored — notification is optional */ }
+
+    LaunchedEffect(state.processingState) {
+        if (!notificationRequested &&
+            state.hasCompletedOnboarding &&
+            Build.VERSION.SDK_INT >= 33 &&
+            (state.processingState is app.hued.data.model.ProcessingState.UpdatingHistory ||
+                state.processingState is app.hued.data.model.ProcessingState.Ready)
+        ) {
+            notificationRequested = true
+            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 

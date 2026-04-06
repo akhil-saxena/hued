@@ -28,7 +28,7 @@ object DatabaseModule {
             HuedDatabase::class.java,
             "hued-database",
         )
-            .addMigrations(HuedDatabase.MIGRATION_1_2)
+            .addMigrations(HuedDatabase.MIGRATION_1_2, HuedDatabase.MIGRATION_2_3)
             .build()
 
     @Provides

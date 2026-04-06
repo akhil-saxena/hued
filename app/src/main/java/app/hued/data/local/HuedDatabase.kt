@@ -29,7 +29,7 @@ import app.hued.data.local.entity.StreakDataEntity
         ProcessingCheckpointEntity::class,
         ExcludedFolderEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -39,6 +39,12 @@ abstract class HuedDatabase : RoomDatabase() {
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE PeriodPalette ADD COLUMN colorWeights TEXT DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE ProcessingCheckpoint ADD COLUMN currentYearDone INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

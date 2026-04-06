@@ -15,82 +15,82 @@ val OutfitFontFamily = FontFamily(
 )
 
 val HuedTypography = Typography(
-    // Month label — 28sp Light
+    // Month label — 30sp Light
     displaySmall = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Light,
-        fontSize = 28.sp,
+        fontSize = 30.sp,
         letterSpacing = (-0.5).sp,
-        lineHeight = 34.sp,
+        lineHeight = 36.sp,
     ),
-    // Delight text — 22sp Light
+    // Delight text — 24sp Light
     headlineMedium = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Light,
-        fontSize = 22.sp,
+        fontSize = 24.sp,
         letterSpacing = (-0.3).sp,
-        lineHeight = 35.sp,
+        lineHeight = 37.sp,
     ),
-    // Share card wordmark — 16sp Bold
+    // Share card wordmark — 18sp Bold
     headlineSmall = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 16.sp,
+        fontSize = 18.sp,
         letterSpacing = 6.sp,
     ),
-    // Wordmark in-app — 18sp Light
+    // Wordmark in-app — 20sp Light
     titleLarge = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Light,
-        fontSize = 18.sp,
+        fontSize = 20.sp,
         letterSpacing = 2.sp,
     ),
-    // Poetic description expanded — 14sp Light
+    // Poetic description expanded — 16sp Light
     titleMedium = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Light,
-        fontSize = 14.sp,
-        lineHeight = 22.sp,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
     ),
-    // Poetic description collapsed — 13sp Light
+    // Poetic description collapsed — 15sp Light
     bodyLarge = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Light,
-        fontSize = 13.sp,
-        lineHeight = 20.sp,
+        fontSize = 15.sp,
+        lineHeight = 22.sp,
     ),
-    // Streak/pattern text — 12sp Regular
+    // Streak/pattern text — 14sp Regular
     bodyMedium = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
+        fontSize = 14.sp,
         letterSpacing = 0.2.sp,
     ),
-    // Tagline — 10sp Light
+    // Tagline — 12sp Light
     bodySmall = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Light,
-        fontSize = 10.sp,
+        fontSize = 12.sp,
         letterSpacing = 1.sp,
     ),
-    // Color name — 10sp Light
+    // Color name — 12sp Light
     labelSmall = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Light,
-        fontSize = 10.sp,
+        fontSize = 12.sp,
         letterSpacing = 0.3.sp,
     ),
-    // Time period selector — 10sp Regular
+    // Time period selector — 12sp Regular
     labelMedium = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 10.sp,
+        fontSize = 12.sp,
         letterSpacing = 1.sp,
     ),
-    // Previous month label — 12sp Regular
+    // Previous month label — 14sp Regular
     labelLarge = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
+        fontSize = 14.sp,
     ),
 )

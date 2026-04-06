@@ -9,4 +9,9 @@ sealed interface ProcessingState {
     data object Ready : ProcessingState
 
     data object Updating : ProcessingState
+
+    data class UpdatingHistory(
+        val totalFound: Int,
+        val totalProcessed: Int,
+    ) : ProcessingState
 }
