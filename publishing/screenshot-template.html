@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #F8F7F5;
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+  }
+
+  .frame {
+    width: 1080px;
+    height: 1920px;
+    background: #F8F7F5;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .frame.active {
+    display: flex;
+  }
+
+  /* ── Top branding area ── */
+  .top-area {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 80px;
+    padding-bottom: 40px;
+  }
+
+  .wordmark {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 28px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    margin-bottom: 32px;
+  }
+
+  .headline {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    font-size: 60px;
+    color: #1a1a1a;
+    text-align: center;
+    letter-spacing: -0.5px;
+    padding: 0 60px;
+    line-height: 1.15;
+  }
+
+  .desc {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    font-size: 30px;
+    color: #999;
+    text-align: center;
+    margin-top: 16px;
+    letter-spacing: 0.3px;
+    padding: 0 80px;
+  }
+
+  /* ── Phone frame ── */
+  .phone-wrap {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 20px;
+    overflow: hidden;
+  }
+
+  .phone {
+    width: 640px;
+    height: 1388px;
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow:
+      0 16px 48px rgba(0,0,0,0.08),
+      0 4px 16px rgba(0,0,0,0.04);
+    background: #F8F7F5;
+    flex-shrink: 0;
+  }
+
+  .phone img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- Screenshot 1: Hero -->
+<div class="frame" id="frame-01">
+  <div class="top-area">
+    <div class="wordmark">hued</div>
+    <div class="headline">your life in color</div>
+    <div class="desc">beautiful palettes from your photo gallery</div>
+  </div>
+  <div class="phone-wrap"><div class="phone"><img src="screenshots/raw/01-hero.png"></div></div>
+</div>
+
+<!-- Screenshot 2: Month -->
+<div class="frame" id="frame-02">
+  <div class="top-area">
+    <div class="wordmark">hued</div>
+    <div class="headline">week. month. year.</div>
+    <div class="desc">see your colors at every scale</div>
+  </div>
+  <div class="phone-wrap"><div class="phone"><img src="screenshots/raw/02-month.png"></div></div>
+</div>
+
+<!-- Screenshot 3: Year -->
+<div class="frame" id="frame-03">
+  <div class="top-area">
+    <div class="wordmark">hued</div>
+    <div class="headline">your year in five colors</div>
+    <div class="desc">a fingerprint of how you see the world</div>
+  </div>
+  <div class="phone-wrap"><div class="phone"><img src="screenshots/raw/03-year.png"></div></div>
+</div>
+
+<!-- Screenshot 4: Share -->
+<div class="frame" id="frame-04">
+  <div class="top-area">
+    <div class="wordmark">hued</div>
+    <div class="headline">share your palette</div>
+    <div class="desc">beautiful 9:16 story cards, ready to post</div>
+  </div>
+  <div class="phone-wrap"><div class="phone"><img src="screenshots/raw/04-share.png"></div></div>
+</div>
+
+<!-- Screenshot 5: Color Names -->
+<div class="frame" id="frame-05">
+  <div class="top-area">
+    <div class="wordmark">hued</div>
+    <div class="headline">31,000 color names</div>
+    <div class="desc">every color gets an evocative name</div>
+  </div>
+  <div class="phone-wrap"><div class="phone"><img src="screenshots/raw/05-colors.png"></div></div>
+</div>
+
+<!-- Screenshot 6: Settings -->
+<div class="frame" id="frame-06">
+  <div class="top-area">
+    <div class="wordmark">hued</div>
+    <div class="headline">your colors, your way</div>
+    <div class="desc">depth, bands, and folder control</div>
+  </div>
+  <div class="phone-wrap"><div class="phone"><img src="screenshots/raw/06-settings.png"></div></div>
+</div>
+
+<script>
+  const hash = location.hash.replace('#', '');
+  if (hash === 'all') {
+    document.querySelectorAll('.frame').forEach(f => {
+      f.classList.add('active');
+      f.style.display = 'flex';
+    });
+    document.body.style.height = 'auto';
+    document.body.style.display = 'flex';
+    document.body.style.flexWrap = 'wrap';
+    document.body.style.gap = '40px';
+    document.body.style.padding = '40px';
+    document.body.style.width = 'auto';
+    document.body.style.background = '#222';
+  } else {
+    const id = 'frame-' + (hash || '01');
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+  }
+</script>
+
+</body>
+</html>
