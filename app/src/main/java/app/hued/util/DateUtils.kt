@@ -4,16 +4,17 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.Month
 import java.time.temporal.TemporalAdjusters
-import java.time.temporal.WeekFields
-import java.util.Locale
 
 object DateUtils {
 
-    fun startOfWeek(date: LocalDate = LocalDate.now()): LocalDate {
-        val weekFields = WeekFields.of(Locale.getDefault())
-        return date.with(weekFields.dayOfWeek(), 1)
-    }
+    // Weeks always start on Monday (ISO) regardless of device locale. A locale-dependent week start
+    // (Sunday in the US, Monday in the EU) produced non-reproducible buckets that also disagreed with
+    // the Monday weekly-notification cadence.
+    fun startOfWeek(date: LocalDate = LocalDate.now()): LocalDate =
+        date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
+    // Exclusive upper bound: the start of the following week. Period queries are half-open
+    // (timestamp < endTimestamp), so this never overlaps the next week.
     fun endOfWeek(date: LocalDate = LocalDate.now()): LocalDate =
         startOfWeek(date).plusDays(7)
 

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark counterpart of Theme.Hued — only sets the boot/splash window so there's no light
+         flash before Compose draws. Compose handles all in-app theming. -->
+    <style name="Theme.Hued" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#141312</item>
+        <item name="android:statusBarColor">#141312</item>
+        <item name="android:navigationBarColor">#141312</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

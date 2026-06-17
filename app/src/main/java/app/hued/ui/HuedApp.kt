@@ -28,8 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.hued.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.hued.data.model.PermissionState
@@ -39,8 +41,6 @@ import app.hued.ui.main.MainViewModel
 import app.hued.ui.onboarding.OnboardingScreen
 import app.hued.ui.folders.NewFoldersDialog
 import app.hued.ui.share.ShareOverlay
-import app.hued.ui.theme.HuedCanvasResting
-import app.hued.ui.theme.HuedTextPrimary
 import app.hued.ui.theme.HuedTheme
 import app.hued.ui.theme.LocalHuedTextMuted
 
@@ -139,7 +139,7 @@ private fun SplashScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(HuedCanvasResting),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         Column(
             modifier = Modifier
@@ -167,9 +167,9 @@ private fun SplashScreen() {
             Spacer(modifier = Modifier.height(40.dp))
 
             Text(
-                text = "your life in color",
+                text = stringResource(R.string.tagline),
                 style = MaterialTheme.typography.displaySmall,
-                color = HuedTextPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center,
             )
         }
@@ -186,7 +186,7 @@ private fun SplashScreen() {
                 color = LocalHuedTextMuted.current,
             )
             Text(
-                text = "v1.0.0",
+                text = "v${app.hued.BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
                 color = LocalHuedTextMuted.current.copy(alpha = 0.5f),
             )

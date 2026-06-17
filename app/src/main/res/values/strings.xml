@@ -28,7 +28,50 @@
     <string name="this_week">this week</string>
     <string name="this_month">this month</string>
     <string name="this_year">this year</string>
+    <string name="most_recent">most recent</string>
     <string name="earlier">earlier</string>
+
+    <!-- Hero / dashboard -->
+    <string name="building_color_history">building your color history</string>
+    <string name="images_count">%d images</string>
+    <string name="few_photos">few photos</string>
+    <string name="few_photos_note">few photos — palette may not fully represent this period</string>
+    <string name="processing_earlier">processing earlier photos…</string>
+    <string name="count_of_total">%1$d of %2$d</string>
+
+    <!-- On this day -->
+    <string name="on_this_day">a year ago this week</string>
+
+    <!-- Delight moments (period word substituted) -->
+    <string name="period_week">week</string>
+    <string name="period_month">month</string>
+    <string name="period_year">year</string>
+    <string name="delight_new_year">a fresh year of color</string>
+    <string name="delight_monochrome">a monochrome %s</string>
+    <string name="delight_rainbow">a rainbow %s</string>
+    <string name="delight_neutral">a quiet, neutral %s</string>
+
+    <!-- Streak -->
+    <string name="streak_weeks">%d-week streak</string>
+    <string name="streak_one_week">first week captured</string>
+
+    <!-- Insights -->
+    <string name="insights">insights</string>
+    <string name="insights_title">your colors</string>
+    <string name="favorite_color">most-seen color</string>
+    <string name="total_photos">photos in color</string>
+    <string name="weeks_tracked">weeks tracked</string>
+    <string name="palette_of_the_year">your year in color</string>
+
+    <!-- Browse / search -->
+    <string name="browse">browse</string>
+    <string name="search_hint">search a color or period</string>
+    <string name="no_results">nothing matches that</string>
+
+    <!-- Wallpaper -->
+    <string name="set_wallpaper">wallpaper</string>
+    <string name="wallpaper_set">Set as wallpaper</string>
+    <string name="wallpaper_failed">Could not set wallpaper</string>
 
     <!-- Share -->
     <string name="share">share</string>
@@ -44,14 +87,25 @@
     <string name="palette_depth">palette depth</string>
     <string name="palette_depth_value">%d colors</string>
     <string name="weighted_bands">weighted bands</string>
+    <string name="match_color_list">match color list to depth</string>
     <string name="photo_sources">photo sources</string>
     <string name="photo_sources_hint">choose which folders hued reads from</string>
     <string name="apply_changes">apply changes?</string>
     <string name="reprocess_message">reprocessing will regenerate all palettes with your new settings.</string>
     <string name="reprocess_all">reprocess all</string>
     <string name="discard">discard</string>
-    <string name="version">hued v1.0.0</string>
+    <string name="version">hued v%s</string>
 
     <!-- Onboarding -->
     <string name="show_me_my_colors">show me my colors</string>
+
+    <!-- New folders dialog -->
+    <string name="new_folders_found">new folders found</string>
+    <string name="new_folders_question">include these in your color history?</string>
+    <string name="process">process</string>
+    <string name="skip">skip</string>
+
+    <!-- Accessibility -->
+    <string name="cd_folder_included">included</string>
+    <string name="cd_folder_excluded">excluded</string>
 </resources>

@@ -33,6 +33,18 @@ class PaletteRepositoryImpl @Inject constructor(
     ): PeriodPaletteEntity? =
         periodPaletteDao.getForPeriod(type.name, startEpochDay, endEpochDay)
 
+    override suspend fun getPaletteByStart(type: TimePeriod, startEpochDay: Long): PeriodPaletteEntity? =
+        periodPaletteDao.getByStart(type.name, startEpochDay)
+
+    override suspend fun getWeekStartDates(): List<Long> =
+        periodPaletteDao.getWeekStartDates()
+
+    override suspend fun getWeekCount(): Int =
+        periodPaletteDao.getWeekCount()
+
+    override suspend fun getTotalPhotoCount(): Int =
+        paletteResultDao.getTotalCountOnce()
+
     override suspend fun deleteAllPalettes() =
         periodPaletteDao.deleteAll()
 

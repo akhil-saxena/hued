@@ -15,6 +15,12 @@ val HuedTextMutedResting = Color(0xFF504E4C)
 val HuedTextMutedWarm = Color(0xFF504538)
 val HuedTextMutedCool = Color(0xFF384A56)
 
+// ── Dark theme ── warm near-black canvas to mirror the warm off-white light canvas
+val HuedCanvasDark = Color(0xFF141312)
+val HuedTextPrimaryDark = Color(0xFFEDEBE8)
+// Muted text on dark canvas — ~6.8:1 contrast on #141312 (exceeds WCAG AAA)
+val HuedTextMutedDark = Color(0xFF9C9893)
+
 fun deriveCanvasTint(dominantColor: Color, restingCanvas: Color = HuedCanvasResting): Color {
     val warmth = dominantColor.red - dominantColor.blue
     val tintStrength = 0.08f

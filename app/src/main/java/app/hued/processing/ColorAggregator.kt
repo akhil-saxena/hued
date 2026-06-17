@@ -84,7 +84,9 @@ class ColorAggregator @Inject constructor(
         val weights = chronological.map { it.totalCount / totalCount }
 
         // Dominant = highest weight (may not be first in the chronological strip)
-        val dominant = topByWeight.first().representativeHex
+        val dominant = topByWeight.firstOrNull()?.representativeHex
+            ?: dominantColors.firstOrNull()
+            ?: "#808080"
         val poeticDescription = poeticDescriptionMatcher.match(dominantColors, startDate.toEpochDay())
 
         return PeriodPaletteEntity(

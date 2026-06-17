@@ -1,8 +1,6 @@
 package app.hued.ui.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -30,8 +29,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.hued.R
 import app.hued.data.DevToolsSettings
 import app.hued.data.DevToolsSettingsProvider
 import app.hued.ui.components.PillButton
@@ -73,27 +75,27 @@ fun SettingsScreen(
             containerColor = MaterialTheme.colorScheme.background,
             title = {
                 Text(
-                    "apply changes?",
+                    stringResource(R.string.apply_changes),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             },
             text = {
                 Text(
-                    "reprocessing will regenerate all palettes with your new settings.",
+                    stringResource(R.string.reprocess_message),
                     style = MaterialTheme.typography.bodySmall,
                     color = LocalHuedTextMuted.current,
                 )
             },
             confirmButton = {
                 PillButton(
-                    text = "reprocess all",
+                    text = stringResource(R.string.reprocess_all),
                     onClick = { showDoneDialog = false; onReprocess() },
                 )
             },
             dismissButton = {
                 PillButton(
-                    text = "discard",
+                    text = stringResource(R.string.discard),
                     onClick = { showDoneDialog = false; onClose() },
                     color = LocalHuedTextMuted.current,
                 )
@@ -115,12 +117,12 @@ fun SettingsScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "settings",
+                text = stringResource(R.string.settings),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
             PillButton(
-                text = "done",
+                text = stringResource(R.string.done),
                 onClick = {
                     if (hasChanges) showDoneDialog = true
                     else onClose()
@@ -132,7 +134,7 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(28.dp))
 
         // ── OPTIONS ──
-        SectionLabel("options")
+        SectionLabel(stringResource(R.string.options))
         Spacer(modifier = Modifier.height(10.dp))
 
         // Palette depth
@@ -141,8 +143,8 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("palette depth", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
-            Text("${settings.paletteDepth} colors", style = MaterialTheme.typography.labelSmall, color = LocalHuedTextMuted.current.copy(alpha = 0.5f))
+            Text(stringResource(R.string.palette_depth), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
+            Text(stringResource(R.string.palette_depth_value, settings.paletteDepth), style = MaterialTheme.typography.labelSmall, color = LocalHuedTextMuted.current.copy(alpha = 0.5f))
         }
         Slider(
             value = settings.paletteDepth.toFloat(),
@@ -156,16 +158,16 @@ fun SettingsScreen(
             ),
         )
 
-        CompactToggle("weighted bands", settings.weightedBands) { scope.launch { settingsProvider.setWeightedBands(!settings.weightedBands); hasChanges = true } }
+        CompactToggle(stringResource(R.string.weighted_bands), settings.weightedBands) { scope.launch { settingsProvider.setWeightedBands(!settings.weightedBands); hasChanges = true } }
 
-        CompactToggle("match color list to depth", settings.showAllColorNames) { scope.launch { settingsProvider.setShowAllColorNames(!settings.showAllColorNames) } }
+        CompactToggle(stringResource(R.string.match_color_list), settings.showAllColorNames) { scope.launch { settingsProvider.setShowAllColorNames(!settings.showAllColorNames) } }
 
         Spacer(modifier = Modifier.height(16.dp))
         SectionDivider()
         Spacer(modifier = Modifier.height(16.dp))
 
         // ── PHOTO SOURCES ──
-        SectionLabel("photo sources")
+        SectionLabel(stringResource(R.string.photo_sources))
         Spacer(modifier = Modifier.height(8.dp))
 
         folders.forEach { folder ->
@@ -178,7 +180,7 @@ fun SettingsScreen(
         // Footer
         Spacer(modifier = Modifier.weight(1f))
         Text(
-            text = "hued v1.0.0",
+            text = stringResource(R.string.version, app.hued.BuildConfig.VERSION_NAME),
             style = MaterialTheme.typography.labelSmall,
             color = LocalHuedTextMuted.current.copy(alpha = 0.3f),
             textAlign = TextAlign.Center,
@@ -203,7 +205,7 @@ private fun CompactToggle(label: String, checked: Boolean, onToggle: () -> Unit)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggle() }
+            .toggleable(value = checked, role = Role.Switch) { onToggle() }
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -211,7 +213,8 @@ private fun CompactToggle(label: String, checked: Boolean, onToggle: () -> Unit)
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
         Switch(
             checked = checked,
-            onCheckedChange = { onToggle() },
+            // Row owns the toggle semantics/click; null here prevents a double-fire.
+            onCheckedChange = null,
             colors = SwitchDefaults.colors(
                 checkedTrackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
                 checkedThumbColor = MaterialTheme.colorScheme.onBackground,
@@ -227,7 +230,7 @@ private fun CompactFolderRow(folder: FolderUiState, onToggle: (Boolean) -> Unit)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggle(!folder.isIncluded) }
+            .toggleable(value = folder.isIncluded, role = Role.Checkbox) { onToggle(it) }
             .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

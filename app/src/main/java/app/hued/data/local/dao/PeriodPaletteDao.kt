@@ -22,7 +22,18 @@ interface PeriodPaletteDao {
     @Query("SELECT * FROM PeriodPalette WHERE periodType = :type ORDER BY startDate DESC LIMIT 1")
     fun getLatestByType(type: String): Flow<PeriodPaletteEntity?>
 
-    @Query("SELECT COUNT(*) FROM PeriodPalette WHERE periodType = 'WEEK' AND startDate >= :startDate AND endDate <= :endDate")
+    @Query("SELECT * FROM PeriodPalette WHERE periodType = :type AND startDate = :startDate LIMIT 1")
+    suspend fun getByStart(type: String, startDate: Long): PeriodPaletteEntity?
+
+    @Query("SELECT startDate FROM PeriodPalette WHERE periodType = 'WEEK' ORDER BY startDate DESC")
+    suspend fun getWeekStartDates(): List<Long>
+
+    @Query("SELECT COUNT(*) FROM PeriodPalette WHERE periodType = 'WEEK'")
+    suspend fun getWeekCount(): Int
+
+    // Sum the photo counts of the matching week palette(s). COUNT(*) would only ever return 0/1
+    // (one row per week), which made the weekly-notification threshold impossible to reach.
+    @Query("SELECT COALESCE(SUM(photoCount), 0) FROM PeriodPalette WHERE periodType = 'WEEK' AND startDate >= :startDate AND endDate <= :endDate")
     suspend fun getPhotoCountForPeriod(startDate: Long, endDate: Long): Int
 
     @Query("SELECT dominantColor FROM PeriodPalette GROUP BY dominantColor ORDER BY COUNT(*) DESC LIMIT 1")

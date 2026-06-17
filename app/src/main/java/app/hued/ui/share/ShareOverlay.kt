@@ -35,8 +35,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import app.hued.R
 import app.hued.data.model.TimePeriod
 import app.hued.ui.components.PillButton
 import app.hued.ui.main.PeriodPaletteUi
@@ -60,7 +62,12 @@ fun ShareOverlay(
 
     LaunchedEffect(palette) {
         bitmap = withContext(Dispatchers.Default) {
-            ShareCardRenderer.renderBitmap(context, palette, period, isCurrent)
+            try {
+                ShareCardRenderer.renderBitmap(context, palette, period, isCurrent)
+            } catch (e: Exception) {
+                android.util.Log.e("ShareOverlay", "Failed to render share card", e)
+                null
+            }
         }
         delay(50)
         stage = 1
@@ -129,17 +136,22 @@ fun ShareOverlay(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PillButton(
-                        text = "save",
+                        text = stringResource(R.string.save),
                         onClick = { bitmap?.let { saveBitmapToGallery(context, it) } },
                         color = Color.White.copy(alpha = 0.7f),
                     )
                     PillButton(
-                        text = "share",
+                        text = stringResource(R.string.set_wallpaper),
+                        onClick = { bitmap?.let { setAsWallpaper(context, it) } },
+                        color = Color.White.copy(alpha = 0.7f),
+                    )
+                    PillButton(
+                        text = stringResource(R.string.share),
                         onClick = { bitmap?.let { shareBitmap(context, it) } },
                         color = Color.White.copy(alpha = 0.7f),
                     )
                     PillButton(
-                        text = "close",
+                        text = stringResource(R.string.close),
                         onClick = onDismiss,
                         color = Color.White.copy(alpha = 0.7f),
                     )
@@ -150,17 +162,32 @@ fun ShareOverlay(
 }
 
 private fun shareBitmap(context: Context, bitmap: Bitmap) {
-    val file = writeBitmapToCache(context, bitmap)
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "image/png"
-        putExtra(Intent.EXTRA_STREAM, uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        val file = writeBitmapToCache(context, bitmap)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(Intent.createChooser(intent, null).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        })
+    } catch (e: Exception) {
+        android.util.Log.e("ShareOverlay", "Failed to share", e)
+        android.widget.Toast.makeText(context, context.getString(R.string.save_failed), android.widget.Toast.LENGTH_SHORT).show()
     }
-    context.startActivity(Intent.createChooser(intent, null).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    })
+}
+
+private fun setAsWallpaper(context: Context, bitmap: Bitmap) {
+    try {
+        android.app.WallpaperManager.getInstance(context).setBitmap(bitmap)
+        android.widget.Toast.makeText(context, context.getString(R.string.wallpaper_set), android.widget.Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+        android.util.Log.e("ShareOverlay", "Failed to set wallpaper", e)
+        android.widget.Toast.makeText(context, context.getString(R.string.wallpaper_failed), android.widget.Toast.LENGTH_SHORT).show()
+    }
 }
 
 private fun saveBitmapToGallery(context: Context, bitmap: Bitmap) {
