@@ -14,12 +14,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,7 +43,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.hued.R
 import app.hued.data.model.PermissionState
@@ -48,8 +53,11 @@ import app.hued.data.model.ProcessingState
 import app.hued.data.model.TimePeriod
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.hued.ui.browse.BrowseScreen
 import app.hued.ui.components.PaletteStrip
+import app.hued.ui.components.PillButton
 import app.hued.ui.components.TimePeriodSelector
+import app.hued.ui.insights.InsightsScreen
 import app.hued.ui.theme.LocalHuedTextMuted
 
 @Composable
@@ -69,6 +77,8 @@ private fun MainScreenContent(
     onEvent: (MainEvent) -> Unit,
 ) {
     var heroExpanded by remember { mutableStateOf(true) }
+    var showInsights by remember { mutableStateOf(false) }
+    var showBrowse by remember { mutableStateOf(false) }
 
     if (state.showSettings) {
         app.hued.ui.settings.SettingsScreen(
@@ -79,6 +89,14 @@ private fun MainScreenContent(
         )
         return
     }
+    if (showInsights) {
+        InsightsScreen(onClose = { showInsights = false })
+        return
+    }
+    if (showBrowse) {
+        BrowseScreen(onClose = { showBrowse = false })
+        return
+    }
 
     val periods = TimePeriod.entries
     val currentIndex = periods.indexOf(state.activePeriod)
@@ -86,8 +104,9 @@ private fun MainScreenContent(
     val isProcessing = state.processingState is ProcessingState.InitialProcessing
     val isUpdatingHistory = state.processingState is ProcessingState.UpdatingHistory
 
-    if (isProcessing) {
-        // Full-screen centered processing state — no tabs, no palettes
+    // Only take over the whole screen on the very first run, when there's nothing to show yet.
+    // Incremental processing of newly-added photos shouldn't blank out existing palettes.
+    if (isProcessing && state.currentPalette == null) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -97,18 +116,18 @@ private fun MainScreenContent(
             val processing = state.processingState as ProcessingState.InitialProcessing
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "building your color history",
+                    text = stringResource(R.string.building_color_history),
                     style = MaterialTheme.typography.headlineMedium,
                     color = LocalHuedTextMuted.current,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = if (processing.totalFound > 0) {
-                        "${processing.totalProcessed} of ${processing.totalFound} images"
+                        stringResource(R.string.processing_progress, processing.totalProcessed, processing.totalFound)
                     } else {
-                        "scanning your gallery\u2026"
+                        stringResource(R.string.scanning_gallery)
                     },
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = LocalHuedTextMuted.current.copy(alpha = 0.5f),
                 )
             }
@@ -120,10 +139,11 @@ private fun MainScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 24.dp),
     ) {
-        // Sticky wordmark + settings icon
-        Spacer(modifier = Modifier.height(48.dp))
+        // Sticky wordmark + actions
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -136,21 +156,30 @@ private fun MainScreenContent(
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
-                    text = "your life in color",
+                    text = stringResource(R.string.tagline),
                     style = MaterialTheme.typography.bodySmall,
                     color = LocalHuedTextMuted.current,
                 )
             }
-            Icon(
-                painter = painterResource(R.drawable.ic_settings),
-                contentDescription = "Settings",
-                modifier = Modifier
-                    .size(16.dp)
-                    .clickable { onEvent(MainEvent.ShowSettings) },
-                tint = LocalHuedTextMuted.current.copy(alpha = 0.35f),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HeaderIcon(
+                    iconRes = R.drawable.ic_browse,
+                    contentDescription = stringResource(R.string.browse),
+                    onClick = { showBrowse = true },
+                )
+                HeaderIcon(
+                    iconRes = R.drawable.ic_insights,
+                    contentDescription = stringResource(R.string.insights),
+                    onClick = { showInsights = true },
+                )
+                HeaderIcon(
+                    iconRes = R.drawable.ic_settings,
+                    contentDescription = stringResource(R.string.settings),
+                    onClick = { onEvent(MainEvent.ShowSettings) },
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
     LazyColumn(
         modifier = Modifier
@@ -185,11 +214,16 @@ private fun MainScreenContent(
         if (current != null) {
             // Hero card — minimal
             item {
-                // "this week" + image count
-                val periodWord = when (state.activePeriod) {
-                    TimePeriod.WEEK -> "this week"
-                    TimePeriod.MONTH -> "this month"
-                    TimePeriod.YEAR -> "this year"
+                // Eyebrow: only claim "this week/month/year" when the hero palette actually covers the
+                // live period. Otherwise the newest data is older, so say "most recent" instead.
+                val periodWord = if (current.isCurrentPeriod) {
+                    when (state.activePeriod) {
+                        TimePeriod.WEEK -> stringResource(R.string.this_week)
+                        TimePeriod.MONTH -> stringResource(R.string.this_month)
+                        TimePeriod.YEAR -> stringResource(R.string.this_year)
+                    }
+                } else {
+                    stringResource(R.string.most_recent)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -202,22 +236,29 @@ private fun MainScreenContent(
                     )
                     if (current.photoCount > 0) {
                         Text(
-                            text = "${current.photoCount} images",
+                            text = stringResource(R.string.images_count, current.photoCount),
                             style = MaterialTheme.typography.labelSmall,
                             color = LocalHuedTextMuted.current.copy(alpha = 0.6f),
                         )
                     }
                 }
+                if (state.streakWeeks >= 2) {
+                    Text(
+                        text = stringResource(R.string.streak_weeks, state.streakWeeks),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LocalHuedTextMuted.current.copy(alpha = 0.7f),
+                    )
+                }
                 if (current.photoCount in 1..4) {
                     Text(
-                        text = "few photos \u2014 palette may not fully represent this period",
+                        text = stringResource(R.string.few_photos_note),
                         style = MaterialTheme.typography.labelSmall,
                         color = LocalHuedTextMuted.current.copy(alpha = 0.4f),
                     )
                 }
                 if (state.permissionState is PermissionState.Partial) {
                     Text(
-                        text = "results reflect selected photos only",
+                        text = stringResource(R.string.partial_access_note),
                         style = MaterialTheme.typography.labelSmall,
                         color = LocalHuedTextMuted.current.copy(alpha = 0.4f),
                     )
@@ -240,6 +281,15 @@ private fun MainScreenContent(
                     text = current.periodLabel,
                     style = MaterialTheme.typography.displaySmall,
                 )
+                // Optional gentle delight observation
+                state.delightMessage?.let { msg ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.labelSmall.copy(fontStyle = FontStyle.Italic),
+                        color = LocalHuedTextMuted.current.copy(alpha = 0.6f),
+                    )
+                }
                 Spacer(modifier = Modifier.height(3.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -252,15 +302,15 @@ private fun MainScreenContent(
                         color = LocalHuedTextMuted.current,
                         modifier = Modifier.weight(1f),
                     )
-                    app.hued.ui.components.PillButton(
-                        text = "share",
+                    PillButton(
+                        text = stringResource(R.string.share),
                         onClick = { onEvent(MainEvent.SharePalette(current.id)) },
                         color = LocalHuedTextMuted.current.copy(alpha = 0.5f),
                         modifier = Modifier.padding(start = 12.dp),
                     )
                 }
 
-                // Top 3 colors by weight — hidden when expanded (expanded shows full list)
+                // Top color by weight — hidden when expanded (expanded shows full list)
                 AnimatedVisibility(
                     visible = !heroExpanded,
                     enter = expandVertically(tween(200)) + fadeIn(tween(200)),
@@ -268,12 +318,11 @@ private fun MainScreenContent(
                 ) {
                     Column {
                         Spacer(modifier = Modifier.height(10.dp))
-                        run {
-                            val top = current.colorNames.zip(current.colors)
-                                .zip(current.colorWeights.ifEmpty { List(current.colors.size) { 1f } })
-                                .map { (nameColor, weight) -> Triple(nameColor.first, nameColor.second, weight) }
-                                .sortedByDescending { it.third }
-                                .first()
+                        val top = current.colorNames.zip(current.colors)
+                            .zip(current.colorWeights.ifEmpty { List(current.colors.size) { 1f } })
+                            .map { (nameColor, weight) -> Triple(nameColor.first, nameColor.second, weight) }
+                            .maxByOrNull { it.third }
+                        if (top != null) {
                             ColorSwatchRow(name = top.first, color = top.second)
                         }
                     }
@@ -306,13 +355,14 @@ private fun MainScreenContent(
                 Spacer(modifier = Modifier.height(80.dp))
                 Text(
                     text = when {
-                        state.processingState is ProcessingState.Updating -> "Refreshing your palette\u2026"
+                        state.processingState is ProcessingState.Updating ->
+                            stringResource(R.string.refreshing_palette)
                         state.permissionState is PermissionState.Denied ||
                             state.permissionState is PermissionState.Revoked ->
-                            "Gallery access needed to discover your colors."
+                            stringResource(R.string.permission_needed)
                         state.permissionState is PermissionState.Partial ->
-                            "No colors for this period \u2014 try granting access to more photos."
-                        else -> "No colors for this period yet \u2014 keep taking photos."
+                            stringResource(R.string.no_photos_partial)
+                        else -> stringResource(R.string.no_photos_message)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = LocalHuedTextMuted.current,
@@ -331,12 +381,41 @@ private fun MainScreenContent(
             }
         }
 
+        // On this day — palette from this week, a year ago
+        val onThisDay = state.onThisDay
+        if (onThisDay != null) {
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.on_this_day),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = LocalHuedTextMuted.current.copy(alpha = 0.5f),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                PaletteStrip(
+                    colors = onThisDay.colors,
+                    height = 28.dp,
+                    colorNames = onThisDay.colorNames,
+                    cornerRadius = 3.dp,
+                )
+                if (onThisDay.poeticDescription.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = onThisDay.poeticDescription,
+                        style = MaterialTheme.typography.bodySmall.copy(fontStyle = FontStyle.Italic),
+                        color = LocalHuedTextMuted.current,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+
         // History — always visible, extra spacing to keep hero as main focus
         if (state.history.isNotEmpty()) {
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "earlier",
+                    text = stringResource(R.string.earlier),
                     style = MaterialTheme.typography.labelSmall,
                     color = LocalHuedTextMuted.current.copy(alpha = 0.5f),
                 )
@@ -366,7 +445,7 @@ private fun MainScreenContent(
                         )
                         if (palette.photoCount in 1..4) {
                             Text(
-                                text = "few photos",
+                                text = stringResource(R.string.few_photos),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = LocalHuedTextMuted.current.copy(alpha = 0.35f),
                             )
@@ -398,8 +477,8 @@ private fun MainScreenContent(
                                     color = LocalHuedTextMuted.current,
                                     modifier = Modifier.weight(1f),
                                 )
-                                app.hued.ui.components.PillButton(
-                                    text = "share",
+                                PillButton(
+                                    text = stringResource(R.string.share),
                                     onClick = { onEvent(MainEvent.SharePalette(palette.id)) },
                                     color = LocalHuedTextMuted.current.copy(alpha = 0.5f),
                                     modifier = Modifier.padding(start = 12.dp),
@@ -428,12 +507,12 @@ private fun MainScreenContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "processing earlier photos\u2026",
+                        text = stringResource(R.string.processing_earlier),
                         style = MaterialTheme.typography.bodySmall,
                         color = LocalHuedTextMuted.current.copy(alpha = 0.4f),
                     )
                     Text(
-                        text = "${updating.totalProcessed} of ${updating.totalFound}",
+                        text = stringResource(R.string.count_of_total, updating.totalProcessed, updating.totalFound),
                         style = MaterialTheme.typography.labelSmall,
                         color = LocalHuedTextMuted.current.copy(alpha = 0.3f),
                     )
@@ -447,6 +526,22 @@ private fun MainScreenContent(
         }
     }
     } // Column
+}
+
+@Composable
+private fun HeaderIcon(
+    iconRes: Int,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(18.dp),
+            tint = LocalHuedTextMuted.current.copy(alpha = 0.55f),
+        )
+    }
 }
 
 @Composable

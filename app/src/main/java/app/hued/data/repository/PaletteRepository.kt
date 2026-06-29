@@ -16,6 +16,14 @@ interface PaletteRepository {
 
     suspend fun getPaletteForPeriod(type: TimePeriod, startEpochDay: Long, endEpochDay: Long): PeriodPaletteEntity?
 
+    suspend fun getPaletteByStart(type: TimePeriod, startEpochDay: Long): PeriodPaletteEntity?
+
+    suspend fun getWeekStartDates(): List<Long>
+
+    suspend fun getWeekCount(): Int
+
+    suspend fun getTotalPhotoCount(): Int
+
     suspend fun deleteAllPalettes()
 
     suspend fun deletePaletteForPeriod(type: TimePeriod, startEpochDay: Long)

@@ -2,6 +2,7 @@ package app.hued.notification
 
 import android.content.Context
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -22,6 +23,7 @@ class NotificationScheduler @Inject constructor(
 
     companion object {
         const val WEEKLY_WORK_NAME = "hued_weekly_palette"
+        const val WEEKLY_PROCESS_WORK_NAME = "hued_weekly_process"
         const val MONDAY_HOUR = 9
     }
 
@@ -48,14 +50,20 @@ class NotificationScheduler @Inject constructor(
             .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
             .build()
 
-        // Enqueue the periodic notification worker
+        // Enqueue the periodic notification worker. UPDATE (not KEEP) so schedule changes in future
+        // app versions actually take effect on existing installs.
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WEEKLY_WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             notifyWork,
         )
 
-        // Also enqueue a one-time processing worker aligned to same schedule
-        WorkManager.getInstance(context).enqueue(processWork)
+        // Also enqueue a one-time processing worker aligned to the same schedule. Unique + REPLACE so
+        // we don't stack a new delayed worker every time processing starts.
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            WEEKLY_PROCESS_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            processWork,
+        )
     }
 }

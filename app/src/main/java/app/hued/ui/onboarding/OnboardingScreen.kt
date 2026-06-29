@@ -36,11 +36,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import app.hued.ui.theme.HuedCanvasResting
-import app.hued.ui.theme.HuedTextPrimary
+import app.hued.R
 import app.hued.ui.theme.LocalHuedTextMuted
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -155,7 +155,7 @@ fun OnboardingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(HuedCanvasResting),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         Column(
             modifier = Modifier
@@ -216,16 +216,16 @@ fun OnboardingScreen(
                         .offset { IntOffset(0, ctaOffsetY.value.dp.roundToPx()) },
                 ) {
                     Text(
-                        text = "your life in color",
+                        text = stringResource(R.string.tagline),
                         style = MaterialTheme.typography.displaySmall,
-                        color = HuedTextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center,
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "All processing happens on your device.",
+                        text = stringResource(R.string.privacy_message),
                         style = MaterialTheme.typography.bodyLarge,
                         color = LocalHuedTextMuted.current,
                         textAlign = TextAlign.Center,
@@ -236,7 +236,7 @@ fun OnboardingScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(HuedTextPrimary)
+                            .background(MaterialTheme.colorScheme.onBackground)
                             .clickable {
                                 val permissions = when {
                                     Build.VERSION.SDK_INT >= 34 -> arrayOf(
@@ -256,9 +256,9 @@ fun OnboardingScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "show me my colors",
+                            text = stringResource(R.string.show_me_my_colors),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = HuedCanvasResting,
+                            color = MaterialTheme.colorScheme.background,
                         )
                     }
                 }
@@ -280,7 +280,7 @@ fun OnboardingScreen(
                     color = LocalHuedTextMuted.current,
                 )
                 Text(
-                    text = "v1.0.0",
+                    text = "v${app.hued.BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.labelSmall,
                     color = LocalHuedTextMuted.current.copy(alpha = 0.5f),
                 )

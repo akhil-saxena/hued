@@ -29,7 +29,7 @@ import app.hued.data.local.entity.StreakDataEntity
         ProcessingCheckpointEntity::class,
         ExcludedFolderEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -45,6 +45,23 @@ abstract class HuedDatabase : RoomDatabase() {
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE ProcessingCheckpoint ADD COLUMN currentYearDone INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // DATE_ADDED watermark so incremental scans don't reprocess the whole gallery
+                db.execSQL("ALTER TABLE ProcessingCheckpoint ADD COLUMN lastDateAdded INTEGER NOT NULL DEFAULT 0")
+                // Earlier versions could insert the same image many times (no unique key on imageUri),
+                // double-counting colors. Collapse duplicates (keep the earliest row) before enforcing uniqueness.
+                db.execSQL(
+                    "DELETE FROM PaletteResult WHERE id NOT IN " +
+                        "(SELECT MIN(id) FROM PaletteResult GROUP BY imageUri)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_PaletteResult_imageUri " +
+                        "ON PaletteResult(imageUri)",
+                )
             }
         }
     }

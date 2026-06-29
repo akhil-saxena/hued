@@ -45,6 +45,13 @@ val HuedTypography = Typography(
         fontSize = 20.sp,
         letterSpacing = 2.sp,
     ),
+    // Footer wordmark / small headings — 16sp Light
+    titleSmall = TextStyle(
+        fontFamily = OutfitFontFamily,
+        fontWeight = FontWeight.Light,
+        fontSize = 16.sp,
+        letterSpacing = 1.5.sp,
+    ),
     // Poetic description expanded — 16sp Light
     titleMedium = TextStyle(
         fontFamily = OutfitFontFamily,

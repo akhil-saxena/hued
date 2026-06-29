@@ -1,6 +1,5 @@
 package app.hued.ui.folders
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,13 +8,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import app.hued.R
 import app.hued.ui.components.PillButton
 import app.hued.ui.theme.LocalHuedTextMuted
 
@@ -31,7 +34,7 @@ fun NewFoldersDialog(
         containerColor = MaterialTheme.colorScheme.background,
         title = {
             Text(
-                "new folders found",
+                stringResource(R.string.new_folders_found),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -39,7 +42,7 @@ fun NewFoldersDialog(
         text = {
             Column {
                 Text(
-                    "include these in your color history?",
+                    stringResource(R.string.new_folders_question),
                     style = MaterialTheme.typography.bodySmall,
                     color = LocalHuedTextMuted.current,
                 )
@@ -54,13 +57,13 @@ fun NewFoldersDialog(
         },
         confirmButton = {
             PillButton(
-                text = "process",
+                text = stringResource(R.string.process),
                 onClick = onConfirm,
             )
         },
         dismissButton = {
             PillButton(
-                text = "skip",
+                text = stringResource(R.string.skip),
                 onClick = onDismiss,
                 color = LocalHuedTextMuted.current,
             )
@@ -73,7 +76,7 @@ private fun FolderRow(folder: FolderUiState, onToggle: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggle(!folder.isIncluded) }
+            .toggleable(value = folder.isIncluded, role = Role.Checkbox) { onToggle(it) }
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

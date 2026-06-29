@@ -8,14 +8,15 @@ import app.hued.data.DevToolsSettingsProvider
 import app.hued.data.local.entity.PaletteResultEntity
 import app.hued.data.model.TimePeriod
 import app.hued.data.repository.PaletteRepository
+import app.hued.util.DateUtils
+import app.hued.widget.HuedWidget
+import androidx.glance.appwidget.updateAll
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.WeekFields
-import java.util.Locale
 
 @HiltWorker
 class ProcessingWorker @AssistedInject constructor(
@@ -35,10 +36,10 @@ class ProcessingWorker @AssistedInject constructor(
         val paletteDepth = settings.paletteDepth
 
         val checkpoint = paletteRepository.getCheckpoint()
-        val sinceTimestamp = checkpoint?.lastTimestamp ?: 0L
+        val sinceDateAdded = checkpoint?.lastDateAdded ?: 0L
         val excludedFolders = paletteRepository.getExcludedFolders()
 
-        val images = galleryScanner.scanGallery(excludedFolders, sinceTimestamp)
+        val images = galleryScanner.scanGallery(excludedFolders, sinceDateAdded)
         if (images.isEmpty()) return Result.success()
 
         for (image in images) {
@@ -52,16 +53,26 @@ class ProcessingWorker @AssistedInject constructor(
             paletteRepository.savePaletteResult(entity)
         }
 
-        // Re-aggregate current week
+        // Advance the watermark so we don't re-scan these next week
+        val maxDateAdded = images.maxOfOrNull { it.dateAdded } ?: 0L
+        if (checkpoint != null && maxDateAdded > checkpoint.lastDateAdded) {
+            paletteRepository.saveCheckpoint(checkpoint.copy(lastDateAdded = maxDateAdded))
+        }
+
+        // Re-aggregate current week + refresh the widget
         aggregateCurrentWeek(paletteDepth)
+        try {
+            HuedWidget().updateAll(applicationContext)
+        } catch (e: Exception) {
+            android.util.Log.w("ProcessingWorker", "Widget refresh failed", e)
+        }
 
         return Result.success()
     }
 
     private suspend fun aggregateCurrentWeek(maxColors: Int) {
         val now = LocalDate.now()
-        val weekFields = WeekFields.of(Locale.getDefault())
-        val startOfWeek = now.with(weekFields.dayOfWeek(), 1)
+        val startOfWeek = DateUtils.startOfWeek(now)
         val endOfWeek = startOfWeek.plusDays(7)
 
         val startTimestamp = startOfWeek.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()

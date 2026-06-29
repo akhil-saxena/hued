@@ -16,6 +16,9 @@ import app.hued.data.model.TimePeriod
 import app.hued.data.repository.PaletteRepository
 import app.hued.di.DefaultDispatcher
 import app.hued.di.IoDispatcher
+import app.hued.util.DateUtils
+import app.hued.widget.HuedWidget
+import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -25,11 +28,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.WeekFields
-import java.util.Locale
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -93,11 +93,14 @@ class ProcessingService : Service() {
             paletteRepository.getExcludedFolders()
         }
 
-        val sinceTimestamp = checkpoint?.lastTimestamp ?: 0L
+        // Scan only photos added since our last completed run (DATE_ADDED watermark). Previously this
+        // used the DATE_TAKEN of the last processed image, which made the filter re-scan the whole
+        // gallery on every launch.
+        val sinceDateAdded = checkpoint?.lastDateAdded ?: 0L
 
         // Images come sorted DATE_TAKEN DESC (newest first)
         val allImages = withContext(ioDispatcher) {
-            galleryScanner.scanGallery(excludedFolders, sinceTimestamp)
+            galleryScanner.scanGallery(excludedFolders, sinceDateAdded)
         }
 
         if (allImages.isEmpty()) return
@@ -113,7 +116,12 @@ class ProcessingService : Service() {
         var totalProcessed = alreadyProcessed
 
         // ── Phase 1: Process current year ──
-        if (currentYearImages.isNotEmpty() && checkpoint?.currentYearDone != true) {
+        // Process current-year images when this is a fresh/complete state (covers incremental new
+        // photos). Only skip them while *resuming* an interrupted initial run that already finished
+        // the current year (isComplete == false && currentYearDone == true).
+        val shouldProcessCurrentYear = currentYearImages.isNotEmpty() &&
+            (checkpoint?.isComplete == true || checkpoint?.currentYearDone != true)
+        if (shouldProcessCurrentYear) {
             for ((index, image) in currentYearImages.withIndex()) {
                 totalProcessed = processImage(image, totalProcessed, totalFound,
                     isLast = index == currentYearImages.lastIndex && olderImages.isEmpty())
@@ -121,6 +129,7 @@ class ProcessingService : Service() {
 
             // Aggregate current year periods immediately
             aggregateCurrentPeriods()
+            updateWidget()
 
             // Mark current year done — UI will switch from processing to main screen
             withContext(ioDispatcher) {
@@ -146,6 +155,32 @@ class ProcessingService : Service() {
 
             // Final full aggregation
             aggregateAllPeriods()
+        }
+
+        // Finalize: advance the DATE_ADDED watermark so future launches only scan genuinely new
+        // photos, and mark the run complete.
+        val maxDateAdded = allImages.maxOfOrNull { it.dateAdded } ?: 0L
+        withContext(ioDispatcher) {
+            paletteRepository.saveCheckpoint(
+                ProcessingCheckpointEntity(
+                    lastMediaStoreId = 0,
+                    lastTimestamp = allImages.lastOrNull()?.timestamp ?: (checkpoint?.lastTimestamp ?: 0L),
+                    totalProcessed = totalProcessed,
+                    totalFound = totalFound,
+                    isComplete = true,
+                    currentYearDone = true,
+                    lastDateAdded = maxOf(checkpoint?.lastDateAdded ?: 0L, maxDateAdded),
+                )
+            )
+        }
+        updateWidget()
+    }
+
+    private suspend fun updateWidget() {
+        try {
+            HuedWidget().updateAll(applicationContext)
+        } catch (e: Exception) {
+            android.util.Log.w("ProcessingService", "Widget refresh failed", e)
         }
     }
 
@@ -200,7 +235,7 @@ class ProcessingService : Service() {
         val zone = ZoneId.systemDefault()
 
         // Current week
-        val weekStart = now.with(WeekFields.of(Locale.getDefault()).dayOfWeek(), 1)
+        val weekStart = DateUtils.startOfWeek(now)
         aggregatePeriod(TimePeriod.WEEK, weekStart, weekStart.plusDays(7), zone)
 
         // All weeks in current year
@@ -228,7 +263,7 @@ class ProcessingService : Service() {
         val zone = ZoneId.systemDefault()
 
         // Aggregate WEEKS — go back 52 weeks
-        var weekStart = now.with(WeekFields.of(Locale.getDefault()).dayOfWeek(), 1)
+        var weekStart = DateUtils.startOfWeek(now)
         repeat(52) {
             val weekEnd = weekStart.plusDays(7)
             aggregatePeriod(TimePeriod.WEEK, weekStart, weekEnd, zone)

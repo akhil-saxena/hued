@@ -35,6 +35,9 @@ interface PaletteResultDao {
     @Query("SELECT COUNT(*) FROM PaletteResult")
     fun getTotalCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM PaletteResult")
+    suspend fun getTotalCountOnce(): Int
+
     @Query("SELECT folderPath, COUNT(*) as photoCount FROM PaletteResult GROUP BY folderPath ORDER BY photoCount DESC")
     suspend fun getFolderCounts(): List<FolderCount>
 

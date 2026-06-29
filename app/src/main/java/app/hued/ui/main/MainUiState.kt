@@ -16,6 +16,9 @@ data class PeriodPaletteUi(
     val photoCount: Int,
     val dominantColorName: String?,
     val favoriteColor: String? = null,
+    // True only when this palette actually covers the live period (this calendar week/month/year).
+    // Drives whether the hero shows "this week" vs "most recent".
+    val isCurrentPeriod: Boolean = false,
 )
 
 data class MainUiState(
@@ -36,6 +39,12 @@ data class MainUiState(
     val showSettings: Boolean = false,
     val newFolders: List<FolderUiState> = emptyList(),
     val showNewFoldersDialog: Boolean = false,
+    // Streak: consecutive weeks (ending now) that captured color. 0 = no streak to show.
+    val streakWeeks: Int = 0,
+    // A gentle "delight moment" for the current hero palette (monochrome week, new year, …). Null = none.
+    val delightMessage: String? = null,
+    // The palette from this week, one year ago (on-this-day memory). Null = none.
+    val onThisDay: PeriodPaletteUi? = null,
 )
 
 sealed interface MainEvent {

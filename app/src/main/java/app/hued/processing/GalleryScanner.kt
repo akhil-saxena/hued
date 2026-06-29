@@ -13,8 +13,9 @@ import javax.inject.Inject
 
 data class ImageReference(
     val uri: Uri,
-    val timestamp: Long,
+    val timestamp: Long, // DATE_TAKEN (or filename/DATE_ADDED fallback) — used for period bucketing
     val folderPath: String,
+    val dateAdded: Long, // DATE_ADDED in millis — used as the incremental-scan watermark
 )
 
 data class FolderInfo(
@@ -83,7 +84,7 @@ class GalleryScanner @Inject constructor(
                 if (excludedFolders.any { folderPath.contains(it, ignoreCase = true) }) continue
 
                 val contentUri = Uri.withAppendedPath(collection, id.toString())
-                images.add(ImageReference(contentUri, timestamp, folderPath))
+                images.add(ImageReference(contentUri, timestamp, folderPath, dateAdded))
             }
         }
 

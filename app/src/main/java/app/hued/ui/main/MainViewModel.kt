@@ -2,11 +2,15 @@ package app.hued.ui.main
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.hued.R
 import app.hued.data.DevToolsSettingsProvider
 import app.hued.data.model.PermissionState
 import app.hued.data.model.ProcessingState
@@ -27,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
@@ -75,10 +80,16 @@ class MainViewModel @Inject constructor(
             val composeColors = hexColors.map { it.toComposeColor() }
             val names = hexColors.map { colorNamer.getName(it) }
             val date = LocalDate.ofEpochDay(entity.startDate)
+            val today = LocalDate.now()
             val label = when (local.activePeriod) {
                 TimePeriod.WEEK -> DateUtils.formatWeek(date)
                 TimePeriod.MONTH -> DateUtils.formatMonth(date)
                 TimePeriod.YEAR -> "${date.year}"
+            }
+            val isCurrentPeriod = when (local.activePeriod) {
+                TimePeriod.WEEK -> entity.startDate == DateUtils.startOfWeek(today).toEpochDay()
+                TimePeriod.MONTH -> entity.startDate == DateUtils.startOfMonth(today).toEpochDay()
+                TimePeriod.YEAR -> entity.startDate == DateUtils.startOfYear(today).toEpochDay()
             }
             val weights = entity.colorWeights?.let {
                 try {
@@ -99,6 +110,7 @@ class MainViewModel @Inject constructor(
                 photoCount = entity.photoCount,
                 dominantColorName = colorNamer.getName(entity.dominantColor),
                 favoriteColor = colorNamer.getName(entity.dominantColor),
+                isCurrentPeriod = isCurrentPeriod,
             )
         }
 
@@ -111,13 +123,22 @@ class MainViewModel @Inject constructor(
             else -> local.processingState
         }
 
+        val current = paletteUiList.firstOrNull()
+        val currentEntity = palettes.firstOrNull()
+        val delight = if (current != null && currentEntity != null) {
+            detectDelight(current.colors, LocalDate.ofEpochDay(currentEntity.startDate), local.activePeriod)
+        } else {
+            null
+        }
+
         local.copy(
             permissionState = permState,
             processingState = processingState,
             useWeightedBands = devSettings.weightedBands,
             showAllColorNames = devSettings.showAllColorNames,
-            currentPalette = paletteUiList.firstOrNull(),
+            currentPalette = current,
             history = paletteUiList.drop(1),
+            delightMessage = delight,
         )
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MainUiState())
@@ -140,6 +161,13 @@ class MainViewModel @Inject constructor(
                 val favName = colorNamer.getName(favHex)
                 _localState.update { it.copy(favoriteColorName = favName) }
             }
+        }
+        // Recompute streak + on-this-day whenever a processing run completes (or on open).
+        viewModelScope.launch {
+            paletteRepository.observeCheckpoint()
+                .map { it?.isComplete == true }
+                .distinctUntilChanged()
+                .collect { recomputeExtras() }
         }
     }
 
@@ -339,5 +367,91 @@ class MainViewModel @Inject constructor(
     private fun startIncrementalProcessing() {
         val intent = Intent(context, ProcessingService::class.java)
         context.startForegroundService(intent)
+    }
+
+    /** Recompute the streak count and the "a year ago this week" memory. */
+    private suspend fun recomputeExtras() {
+        val today = LocalDate.now()
+        val weekStarts = withContext(Dispatchers.IO) { paletteRepository.getWeekStartDates() }.toHashSet()
+        val streak = computeStreak(weekStarts, today)
+
+        val lastYearStart = DateUtils.startOfWeek(today).minusWeeks(52).toEpochDay()
+        val otd = withContext(Dispatchers.IO) {
+            paletteRepository.getPaletteByStart(TimePeriod.WEEK, lastYearStart)
+        }
+        val otdUi = otd?.let { entity ->
+            val hex = try {
+                json.decodeFromString<List<String>>(entity.colors)
+            } catch (e: Exception) {
+                emptyList()
+            }
+            PeriodPaletteUi(
+                id = entity.id,
+                periodLabel = DateUtils.formatWeek(LocalDate.ofEpochDay(entity.startDate)),
+                colors = hex.map { it.toComposeColor() },
+                colorNames = hex.map { colorNamer.getName(it) },
+                poeticDescription = entity.poeticDescription,
+                photoCount = entity.photoCount,
+                dominantColorName = colorNamer.getName(entity.dominantColor),
+            )
+        }
+
+        _localState.update { it.copy(streakWeeks = streak, onThisDay = otdUi) }
+    }
+
+    /** Consecutive ISO weeks (ending at the current week, with a one-week grace) that captured color. */
+    private fun computeStreak(weekStartDays: Set<Long>, today: LocalDate): Int {
+        if (weekStartDays.isEmpty()) return 0
+        var cursor = DateUtils.startOfWeek(today)
+        // Grace: the current week may not have photos yet — start from last week if so.
+        if (cursor.toEpochDay() !in weekStartDays) {
+            cursor = cursor.minusWeeks(1)
+        }
+        var streak = 0
+        while (cursor.toEpochDay() in weekStartDays) {
+            streak++
+            cursor = cursor.minusWeeks(1)
+        }
+        return streak
+    }
+
+    /** A gentle, optional observation about the current palette. Returns null when nothing stands out. */
+    private fun detectDelight(colors: List<Color>, startDate: LocalDate, period: TimePeriod): String? {
+        if (period == TimePeriod.WEEK && startDate.monthValue == 1 && startDate.dayOfMonth <= 7) {
+            return context.getString(R.string.delight_new_year)
+        }
+        if (colors.size < 3) return null
+        val word = periodWord(period)
+        return try {
+            val hsls = colors.map { c ->
+                FloatArray(3).also { ColorUtils.colorToHSL(c.toArgb(), it) }
+            }
+            val saturated = hsls.filter { it[1] >= 0.15f && it[2] in 0.12f..0.90f }
+            when {
+                saturated.size <= 1 -> context.getString(R.string.delight_neutral, word)
+                saturated.size >= 3 -> {
+                    val hues = saturated.map { it[0] }.sorted()
+                    var maxGap = 360f - (hues.last() - hues.first())
+                    for (i in 1 until hues.size) {
+                        maxGap = maxOf(maxGap, hues[i] - hues[i - 1])
+                    }
+                    val arc = 360f - maxGap // angular span the hues occupy
+                    when {
+                        arc <= 45f -> context.getString(R.string.delight_monochrome, word)
+                        arc >= 300f -> context.getString(R.string.delight_rainbow, word)
+                        else -> null
+                    }
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun periodWord(period: TimePeriod): String = when (period) {
+        TimePeriod.WEEK -> context.getString(R.string.period_week)
+        TimePeriod.MONTH -> context.getString(R.string.period_month)
+        TimePeriod.YEAR -> context.getString(R.string.period_year)
     }
 }

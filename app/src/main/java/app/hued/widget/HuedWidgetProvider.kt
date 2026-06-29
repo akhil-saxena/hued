@@ -67,17 +67,23 @@ class HuedWidget : GlanceAppWidget() {
             android.util.Log.w("HuedWidget", "Failed to load palette", e)
         }
 
+        // This Glance version has no day/night ColorProvider, so resolve night mode from config here.
+        val isDark = (context.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+
         provideContent {
-            WidgetContent(label = label, hexColors = hexColors)
+            WidgetContent(label = label, hexColors = hexColors, isDark = isDark)
         }
     }
 }
 
 @Composable
-private fun WidgetContent(label: String, hexColors: List<String>) {
-    val bgColor = ColorProvider(Color(0xFFF8F7F5))
-    val textColor = ColorProvider(Color(0xFF2A2826))
-    val mutedColor = ColorProvider(Color(0xFF504E4C))
+private fun WidgetContent(label: String, hexColors: List<String>, isDark: Boolean) {
+    val bgColor = ColorProvider(if (isDark) Color(0xFF141312) else Color(0xFFF8F7F5))
+    val textColor = ColorProvider(if (isDark) Color(0xFFEDEBE8) else Color(0xFF2A2826))
+    val mutedColor = ColorProvider(if (isDark) Color(0xFF9C9893) else Color(0xFF504E4C))
+    val placeholderColor = ColorProvider(if (isDark) Color(0xFF2A2826) else Color(0xFFE0DDD8))
 
     Row(
         modifier = GlanceModifier
@@ -110,7 +116,7 @@ private fun WidgetContent(label: String, hexColors: List<String>) {
                 }
             } else {
                 Spacer(
-                    modifier = GlanceModifier.defaultWeight().height(36.dp).background(ColorProvider(Color(0xFFE0DDD8))),
+                    modifier = GlanceModifier.defaultWeight().height(36.dp).background(placeholderColor),
                 )
             }
         }

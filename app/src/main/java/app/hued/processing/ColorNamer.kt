@@ -19,7 +19,11 @@ class ColorNamer @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
     private val colorNames: List<ColorNameEntry> by lazy { loadColorNames() }
-    private val cache = LinkedHashMap<String, String>(128, 0.75f, true)
+    // Access-ordered LRU. Wrapped in a synchronized map because getName() is called concurrently
+    // from the ViewModel's flow (Dispatchers.Default) and the insights/browse screens.
+    private val cache = java.util.Collections.synchronizedMap(
+        LinkedHashMap<String, String>(128, 0.75f, true),
+    )
 
     fun getName(hexColor: String): String {
         cache[hexColor]?.let { return it }
